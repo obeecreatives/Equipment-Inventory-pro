@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { X, Plus, Trash2, CheckCircle2, AlertTriangle, Calendar, User, Phone, Layers } from 'lucide-react';
 import { InventarisItem, BookingItem, Role, StatusBiaya, KategoriPeminjam } from '../../types/inventory';
 import { getTodayString, getFutureDateString, formatRupiah } from '../../lib/dateUtils';
+import { EquipmentCombobox } from '../EquipmentCombobox';
 
 interface BookingModalProps {
   presetItem: InventarisItem | null;
@@ -178,7 +179,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
         </div>
 
         {/* Modal Body Form */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 space-y-4">
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 pb-32 sm:pb-40 space-y-4">
           {/* Dates Range */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
@@ -345,19 +346,19 @@ export const BookingModal: React.FC<BookingModalProps> = ({
             {itemRows.map((row, idx) => {
               const selectedItem = inventaris.find(i => i.id === row.itemId);
               return (
-                <div key={idx} className="p-3 rounded-xl border bg-slate-50 dark:bg-[#1E293B] border-slate-200 dark:border-slate-700/80 space-y-1.5">
+                <div 
+                  key={idx} 
+                  style={{ zIndex: 40 - idx }}
+                  className="p-3 rounded-xl border bg-slate-50 dark:bg-[#1E293B] border-slate-200 dark:border-slate-700/80 space-y-1.5 relative"
+                >
                   <div className="flex items-center gap-2">
-                    <select
-                      value={row.itemId}
-                      onChange={e => updateRow(idx, 'itemId', e.target.value)}
-                      className="flex-1 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold border bg-white dark:bg-[#0F172A] border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:border-[#E30000]"
-                    >
-                      {inventaris.map(inv => (
-                        <option key={inv.id} value={inv.id}>
-                          {inv.namaBarang} ({inv.kategori}) — Total: {inv.qtyTotal} {inv.satuan}
-                        </option>
-                      ))}
-                    </select>
+                    <EquipmentCombobox
+                      items={inventaris}
+                      selectedId={row.itemId}
+                      onSelect={(item) => updateRow(idx, 'itemId', item.id)}
+                      otherSelectedIds={itemRows.map(r => r.itemId)}
+                      placeholder="Ketik untuk mencari alat (nama, kategori, ID)..."
+                    />
 
                     <input
                       type="number"
@@ -365,7 +366,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                       max={selectedItem?.qtyTotal || 99}
                       value={row.qty}
                       onChange={e => updateRow(idx, 'qty', Math.max(1, parseInt(e.target.value) || 1))}
-                      className="w-18 px-2.5 py-1.5 rounded-lg text-xs sm:text-sm font-bold text-center border bg-white dark:bg-[#0F172A] border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
+                      className="w-18 px-2.5 py-2 rounded-lg text-xs sm:text-sm font-bold text-center border bg-white dark:bg-[#0F172A] border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
                       title="Jumlah unit"
                     />
 
@@ -373,7 +374,8 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                       <button
                         type="button"
                         onClick={() => removeItemRow(idx)}
-                        className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 cursor-pointer"
+                        className="p-2 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 cursor-pointer"
+                        title="Hapus baris alat ini"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
