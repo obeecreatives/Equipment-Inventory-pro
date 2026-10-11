@@ -1,0 +1,77 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --obee-red: #E30000;
+  --obee-red-dark: #DC2626;
+  --obee-red-soft: rgba(227, 0, 0, 0.12);
+  --obee-cyan: #38BDF8;
+  
+  /* Status Colors */
+  --status-emerald: #10B981;
+  --status-amber: #F59E0B;
+  --status-blue: #3B82F6;
+  --status-teal: #14B8A6;
+  --status-indigo: #6366F1;
+  --status-purple: #A855F7;
+  --status-red: #EF4444;
+}
+
+/* Base font size dinaikkan ke 17.2px untuk kenyamanan baca tim lapangan & manajemen */
+html {
+  font-size: 17.2px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html.dark, html.dark body {
+  background-color: #0B0F17;
+  color: #F8FAFC;
+}
+
+html:not(.dark), html:not(.dark) body {
+  background-color: #F8FAFC;
+  color: #0F172A;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  line-height: 1.55;
+  transition: background-color 0.2s ease, color 0.2s ease;
+  min-height: 100vh;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.5);
+}
+
+/* Spin animation for sync button */
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 2s linear infinite;
+}

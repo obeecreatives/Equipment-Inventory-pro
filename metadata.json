@@ -1,0 +1,6 @@
+{
+  "name": "Equipment Inventaris",
+  "description": "Sistem Inventaris Peralatan Modern dengan Arsitektur Headless Google Apps Script & Google Sheets",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
