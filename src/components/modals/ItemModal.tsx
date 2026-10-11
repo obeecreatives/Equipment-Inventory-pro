@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Save, Box } from 'lucide-react';
+import { X, Save, Box, Image as ImageIcon } from 'lucide-react';
 import { InventarisItem, KondisiAlat } from '../../types/inventory';
 
 interface ItemModalProps {
@@ -22,7 +22,8 @@ export const ItemModal: React.FC<ItemModalProps> = ({ item, onClose, onSave }) =
     hargaSewa: item?.hargaSewa || 0,
     lokasiSimpan: item?.lokasiSimpan || '',
     kondisiAlat: item?.kondisiAlat || 'Baik',
-    keterangan: item?.keterangan || ''
+    keterangan: item?.keterangan || '',
+    fotoUrl: item?.fotoUrl || ''
   });
 
   const handleChange = (field: keyof InventarisItem, value: any) => {
@@ -51,7 +52,7 @@ export const ItemModal: React.FC<ItemModalProps> = ({ item, onClose, onSave }) =
               <h3 className="font-extrabold text-base sm:text-lg">
                 {isEdit ? 'Edit Data Peralatan' : 'Tambah Peralatan Baru'}
               </h3>
-              <p className="text-xs text-slate-400">Master inventaris dan nilai aset studio.</p>
+              <p className="text-xs text-slate-400">Master inventaris, foto & nilai aset studio.</p>
             </div>
           </div>
           <button
@@ -63,6 +64,42 @@ export const ItemModal: React.FC<ItemModalProps> = ({ item, onClose, onSave }) =
         </div>
 
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 space-y-3.5">
+          {/* Photo URL & Live Preview */}
+          <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-[#1E293B] space-y-2">
+            <label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+              <ImageIcon className="w-3.5 h-3.5 text-[#38BDF8]" />
+              <span>URL Foto Alat (Thumbnail Kartu)</span>
+            </label>
+            <div className="flex gap-2.5 items-center">
+              <input
+                type="url"
+                value={formData.fotoUrl || ''}
+                onChange={e => handleChange('fotoUrl', e.target.value)}
+                placeholder="https://... (Link Google Drive / Imgur / Web)"
+                className="flex-1 px-3 py-1.5 rounded-lg text-xs border bg-white dark:bg-[#0F172A] border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:border-[#E30000]"
+              />
+
+              {/* Live Preview Box */}
+              <div className="w-12 h-12 rounded-lg bg-slate-200 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 overflow-hidden shrink-0 flex items-center justify-center text-slate-400">
+                {formData.fotoUrl ? (
+                  <img
+                    src={formData.fotoUrl}
+                    alt="Preview"
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLElement).style.display = 'none';
+                    }}
+                  />
+                ) : (
+                  <ImageIcon className="w-5 h-5 opacity-50" />
+                )}
+              </div>
+            </div>
+            <p className="text-[10.5px] text-slate-400">
+              * Masukkan tautan gambar langsung agar kru studio dapat mengenali alat secara visual.
+            </p>
+          </div>
+
           <div>
             <label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1 block">
               Nama Barang / Model *

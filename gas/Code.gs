@@ -2,6 +2,7 @@
 // obeecreatives - EQUIPMENT HUB (HEADLESS GAS REST BACKEND)
 // Spreadsheet ID: 1T7jJL5YKhZEvKNhbweWA_aFkxrsBCHXZ_lJFeqgJeJc
 // Arsitektur Standalone REST API: doGet & doPost (JSON Output)
+// Update: Ditambahkan kolom 'FotoUrl' di akhir header Inventaris
 // ============================================================================
 
 const SPREADSHEET_ID = '1T7jJL5YKhZEvKNhbweWA_aFkxrsBCHXZ_lJFeqgJeJc';
@@ -26,9 +27,10 @@ const BOOKING_STATUS = ['Dipesan', 'Sedang Dipinjam', 'Selesai', 'Dibatalkan'];
 const KONDISI_KEMBALI_OPTIONS = ['Baik', 'Rusak', 'Hilang'];
 const KATEGORI_PEMINJAM_OPTIONS = ['Tim Internal', 'Eksternal'];
 
+// 12 kolom inventaris (FotoUrl ditambahkan di akhir array header)
 const INV_HEADERS = [
   'ID', 'Kategori', 'NamaBarang', 'NoSeri', 'Satuan', 'QtyTotal',
-  'HargaPerolehan', 'HargaSewa', 'LokasiSimpan', 'KondisiAlat', 'Keterangan'
+  'HargaPerolehan', 'HargaSewa', 'LokasiSimpan', 'KondisiAlat', 'Keterangan', 'FotoUrl'
 ];
 
 const BOOKING_HEADERS = [
@@ -54,7 +56,7 @@ const INV_KEY_MAP = {
   'ID': 'id', 'Kategori': 'kategori', 'NamaBarang': 'namaBarang', 'NoSeri': 'noSeri',
   'Satuan': 'satuan', 'QtyTotal': 'qtyTotal', 'HargaPerolehan': 'hargaPerolehan',
   'HargaSewa': 'hargaSewa', 'LokasiSimpan': 'lokasiSimpan', 'KondisiAlat': 'kondisiAlat',
-  'Keterangan': 'keterangan'
+  'Keterangan': 'keterangan', 'FotoUrl': 'fotoUrl'
 };
 
 const BOOKING_KEY_MAP = {
@@ -214,7 +216,7 @@ function getInitialData(callerEmail) {
     
     // Cek status admin dari callerEmail atau Session
     const activeEmail = callerEmail || Session.getActiveUser().getEmail() || '';
-    const admin = activeEmail ? isAdmin_(activeEmail) : true; // Default admin untuk master sync
+    const admin = activeEmail ? isAdmin_(activeEmail) : true;
 
     let inventaris = invData
       .filter(function (row) { return row[0]; })
@@ -235,7 +237,7 @@ function getInitialData(callerEmail) {
     const users = getAllUsers_();
 
     return sanitizeForClient_({
-      serverCodeVersion: 'EQUIPMENT-HEADLESS-v2.0',
+      serverCodeVersion: 'EQUIPMENT-HEADLESS-v2.1',
       ok: true,
       isAdmin: admin,
       spreadsheetId: SPREADSHEET_ID,
@@ -254,7 +256,7 @@ function getInitialData(callerEmail) {
     });
   } catch (err) {
     return sanitizeForClient_({
-      serverCodeVersion: 'EQUIPMENT-HEADLESS-v2.0',
+      serverCodeVersion: 'EQUIPMENT-HEADLESS-v2.1',
       ok: false,
       isAdmin: false,
       errorMessage: err && err.message,
@@ -283,7 +285,6 @@ function getBookedQty_(bookingRows, headers, itemId, start, end, excludeBookingI
     const status = row[statusIdx];
     if (status !== 'Dipesan' && status !== 'Sedang Dipinjam') return;
 
-    // Normalisasi tanggal perbandingan
     const rowStart = new Date(String(row[startIdx]).split('T')[0] + 'T00:00:00');
     const rowEnd = new Date(String(row[endIdx]).split('T')[0] + 'T23:59:59');
     const reqStart = new Date(String(start).split('T')[0] + 'T00:00:00');
@@ -393,7 +394,6 @@ function createBookingBatch(shared, items) {
     throw new Error('Belum ada alat yang dipilih.');
   }
 
-  // Gunakan LockService agar tidak terjadi tabrakan nomor formulir atau race-condition
   const lock = LockService.getScriptLock();
   lock.waitLock(15000);
 
@@ -559,7 +559,8 @@ function saveInventarisItem(item) {
     'HargaSewa': item.hargaSewa || 0,
     'LokasiSimpan': item.lokasiSimpan || '',
     'KondisiAlat': item.kondisiAlat || 'Baik',
-    'Keterangan': item.keterangan || ''
+    'Keterangan': item.keterangan || '',
+    'FotoUrl': item.fotoUrl || ''
   };
 
   if (item.id) {

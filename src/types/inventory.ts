@@ -18,6 +18,7 @@ export interface InventarisItem {
   lokasiSimpan: string;
   kondisiAlat: KondisiAlat;
   keterangan: string;
+  fotoUrl?: string;
 }
 
 export interface BookingItem {
@@ -47,6 +48,7 @@ export interface BookingItem {
   createdAt: string;
   statusBiaya: StatusBiaya;
   biayaSewa: number;
+  fotoUrl?: string;
 }
 
 export interface BookingGroup {

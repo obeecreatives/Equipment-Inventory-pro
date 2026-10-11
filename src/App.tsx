@@ -441,7 +441,8 @@ export default function App() {
       hargaSewa: Number(itemData.hargaSewa) || 0,
       lokasiSimpan: itemData.lokasiSimpan || '',
       kondisiAlat: itemData.kondisiAlat || 'Baik',
-      keterangan: itemData.keterangan || ''
+      keterangan: itemData.keterangan || '',
+      fotoUrl: itemData.fotoUrl || ''
     };
 
     setInventaris(prev => {
