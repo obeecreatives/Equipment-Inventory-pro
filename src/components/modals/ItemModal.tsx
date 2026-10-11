@@ -110,6 +110,7 @@ export const ItemModal: React.FC<ItemModalProps> = ({ item, onClose, onSave }) =
                   <img
                     src={previewImgSrc}
                     alt="Preview"
+                    referrerPolicy="no-referrer"
                     className="w-full h-full object-cover"
                     onError={(e) => {
                       (e.target as HTMLElement).style.display = 'none';

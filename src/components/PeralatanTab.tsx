@@ -124,6 +124,46 @@ export const PeralatanTab: React.FC<PeralatanTabProps> = ({
     return Layers;
   };
 
+  const renderCardImage = (item: InventarisItem) => {
+    const FallbackIcon = getCategoryFallbackIcon(item.kategori);
+    const formattedUrl = formatDriveImageUrl(item.fotoUrl, 800);
+
+    if (!formattedUrl) {
+      return (
+        <div className="w-full h-full flex flex-col items-center justify-center gap-1.5 text-slate-400 dark:text-slate-500 bg-linear-to-br from-slate-100 to-slate-200 dark:from-[#0F172A] dark:to-[#1E293B]">
+          <FallbackIcon className="w-8 h-8 opacity-60 text-slate-400 group-hover:text-[#E30000] transition-colors" />
+          <span className="text-[10px] uppercase font-bold tracking-wider opacity-60">
+            {item.kategori}
+          </span>
+        </div>
+      );
+    }
+
+    return (
+      <div className="w-full h-full relative">
+        <img
+          src={formattedUrl}
+          alt={item.namaBarang}
+          loading="lazy"
+          referrerPolicy="no-referrer"
+          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+          onError={(e) => {
+            // Gracefully switch to fallback icon on load error
+            (e.target as HTMLElement).style.display = 'none';
+            const fallback = (e.target as HTMLElement).nextElementSibling;
+            if (fallback) (fallback as HTMLElement).classList.remove('hidden');
+          }}
+        />
+        <div className="hidden w-full h-full absolute inset-0 flex flex-col items-center justify-center gap-1.5 text-slate-400 dark:text-slate-500 bg-linear-to-br from-slate-100 to-slate-200 dark:from-[#0F172A] dark:to-[#1E293B]">
+          <FallbackIcon className="w-8 h-8 opacity-60 text-slate-400 group-hover:text-[#E30000] transition-colors" />
+          <span className="text-[10px] uppercase font-bold tracking-wider opacity-60">
+            {item.kategori}
+          </span>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-5">
       {/* Search & Filter Toolbar */}
@@ -246,30 +286,7 @@ export const PeralatanTab: React.FC<PeralatanTabProps> = ({
                         <div>
                           {/* Image Thumbnail Container (Lazy Loaded & Responsive) */}
                           <div className="relative w-full aspect-16/9 bg-slate-100 dark:bg-[#0F172A] overflow-hidden border-b border-slate-100 dark:border-slate-800/60 flex items-center justify-center">
-                            {item.fotoUrl ? (
-                              <img
-                                src={formatDriveImageUrl(item.fotoUrl, 800)}
-                                alt={item.namaBarang}
-                                loading="lazy"
-                                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                                onError={(e) => {
-                                  // Fallback gracefully to icon placeholder if image fails to load
-                                  (e.target as HTMLElement).style.display = 'none';
-                                  const fallbackEl = (e.target as HTMLElement).nextElementSibling;
-                                  if (fallbackEl) (fallbackEl as HTMLElement).style.display = 'flex';
-                                }}
-                              />
-                            ) : null}
-
-                            {/* Fallback Icon Box if no fotoUrl or load failed */}
-                            <div 
-                              className={`w-full h-full flex flex-col items-center justify-center gap-1.5 text-slate-400 dark:text-slate-500 bg-linear-to-br from-slate-100 to-slate-200 dark:from-[#0F172A] dark:to-[#1E293B] ${item.fotoUrl ? 'hidden' : 'flex'}`}
-                            >
-                              <FallbackIcon className="w-8 h-8 opacity-60 text-slate-400 group-hover:text-[#E30000] transition-colors" />
-                              <span className="text-[10px] uppercase font-bold tracking-wider opacity-60">
-                                {item.kategori}
-                              </span>
-                            </div>
+                            {renderCardImage(item)}
 
                             {/* Status Tag Overlay on Image */}
                             <div className="absolute top-2.5 left-2.5">
@@ -375,7 +392,16 @@ export const PeralatanTab: React.FC<PeralatanTabProps> = ({
                         {/* Small Avatar Thumbnail */}
                         <div className="w-11 h-11 rounded-lg bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 overflow-hidden shrink-0 flex items-center justify-center">
                           {item.fotoUrl ? (
-                            <img src={formatDriveImageUrl(item.fotoUrl, 200)} alt={item.namaBarang} className="w-full h-full object-cover" loading="lazy" />
+                            <img 
+                              src={formatDriveImageUrl(item.fotoUrl, 200)} 
+                              alt={item.namaBarang} 
+                              className="w-full h-full object-cover" 
+                              loading="lazy" 
+                              referrerPolicy="no-referrer"
+                              onError={(e) => {
+                                (e.target as HTMLElement).style.display = 'none';
+                              }}
+                            />
                           ) : (
                             <ImageIcon className="w-4 h-4 text-slate-400" />
                           )}
