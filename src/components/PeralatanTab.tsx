@@ -21,6 +21,7 @@ import {
 import { InventarisItem, KondisiAlat, Role } from '../types/inventory';
 import { formatRupiah } from '../lib/dateUtils';
 import { getViewMode, setViewMode } from '../lib/storage';
+import { formatDriveImageUrl } from '../lib/imageUtils';
 
 interface PeralatanTabProps {
   items: InventarisItem[];
@@ -247,7 +248,7 @@ export const PeralatanTab: React.FC<PeralatanTabProps> = ({
                           <div className="relative w-full aspect-16/9 bg-slate-100 dark:bg-[#0F172A] overflow-hidden border-b border-slate-100 dark:border-slate-800/60 flex items-center justify-center">
                             {item.fotoUrl ? (
                               <img
-                                src={item.fotoUrl}
+                                src={formatDriveImageUrl(item.fotoUrl, 800)}
                                 alt={item.namaBarang}
                                 loading="lazy"
                                 className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
@@ -374,7 +375,7 @@ export const PeralatanTab: React.FC<PeralatanTabProps> = ({
                         {/* Small Avatar Thumbnail */}
                         <div className="w-11 h-11 rounded-lg bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 overflow-hidden shrink-0 flex items-center justify-center">
                           {item.fotoUrl ? (
-                            <img src={item.fotoUrl} alt={item.namaBarang} className="w-full h-full object-cover" loading="lazy" />
+                            <img src={formatDriveImageUrl(item.fotoUrl, 200)} alt={item.namaBarang} className="w-full h-full object-cover" loading="lazy" />
                           ) : (
                             <ImageIcon className="w-4 h-4 text-slate-400" />
                           )}

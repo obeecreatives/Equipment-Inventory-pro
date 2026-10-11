@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { X, Save, Box, Image as ImageIcon } from 'lucide-react';
+import { X, Save, Box, Image as ImageIcon, CheckCircle2, AlertTriangle, Folder, HelpCircle, ExternalLink, Sparkles } from 'lucide-react';
 import { InventarisItem, KondisiAlat } from '../../types/inventory';
+import { formatDriveImageUrl, isGoogleDriveFolder, extractDriveFileId } from '../../lib/imageUtils';
 
 interface ItemModalProps {
   item: InventarisItem | null;
@@ -10,6 +11,7 @@ interface ItemModalProps {
 
 export const ItemModal: React.FC<ItemModalProps> = ({ item, onClose, onSave }) => {
   const isEdit = !!item?.id;
+  const [showDriveGuide, setShowDriveGuide] = useState(false);
 
   const [formData, setFormData] = useState<Partial<InventarisItem>>({
     id: item?.id || '',
@@ -33,9 +35,21 @@ export const ItemModal: React.FC<ItemModalProps> = ({ item, onClose, onSave }) =
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.namaBarang?.trim() || !formData.kategori?.trim()) return;
-    onSave(formData);
+    
+    // Otomatis optimasi jika menggunakan link Google Drive
+    const cleanFoto = formData.fotoUrl?.trim() ? formatDriveImageUrl(formData.fotoUrl.trim()) : '';
+    
+    onSave({
+      ...formData,
+      fotoUrl: cleanFoto
+    });
     onClose();
   };
+
+  const currentUrl = (formData.fotoUrl || '').trim();
+  const isFolder = isGoogleDriveFolder(currentUrl);
+  const driveFileId = extractDriveFileId(currentUrl);
+  const previewImgSrc = formatDriveImageUrl(currentUrl, 400);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-150">
@@ -65,25 +79,36 @@ export const ItemModal: React.FC<ItemModalProps> = ({ item, onClose, onSave }) =
 
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 space-y-3.5">
           {/* Photo URL & Live Preview */}
-          <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-[#1E293B] space-y-2">
-            <label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-              <ImageIcon className="w-3.5 h-3.5 text-[#38BDF8]" />
-              <span>URL Foto Alat (Thumbnail Kartu)</span>
-            </label>
+          <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-[#1E293B] space-y-2.5">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                <ImageIcon className="w-3.5 h-3.5 text-[#38BDF8]" />
+                <span>URL Foto Alat (Thumbnail Kartu)</span>
+              </label>
+              <button
+                type="button"
+                onClick={() => setShowDriveGuide(!showDriveGuide)}
+                className="text-[11px] font-semibold text-[#38BDF8] hover:underline flex items-center gap-1 cursor-pointer"
+              >
+                <HelpCircle className="w-3 h-3" />
+                <span>Panduan Link Google Drive</span>
+              </button>
+            </div>
+
             <div className="flex gap-2.5 items-center">
               <input
                 type="url"
                 value={formData.fotoUrl || ''}
                 onChange={e => handleChange('fotoUrl', e.target.value)}
-                placeholder="https://... (Link Google Drive / Imgur / Web)"
+                placeholder="https://... (Link Foto Google Drive, Imgur, atau Web)"
                 className="flex-1 px-3 py-1.5 rounded-lg text-xs border bg-white dark:bg-[#0F172A] border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:border-[#E30000]"
               />
 
               {/* Live Preview Box */}
               <div className="w-12 h-12 rounded-lg bg-slate-200 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 overflow-hidden shrink-0 flex items-center justify-center text-slate-400">
-                {formData.fotoUrl ? (
+                {previewImgSrc && !isFolder ? (
                   <img
-                    src={formData.fotoUrl}
+                    src={previewImgSrc}
                     alt="Preview"
                     className="w-full h-full object-cover"
                     onError={(e) => {
@@ -95,8 +120,64 @@ export const ItemModal: React.FC<ItemModalProps> = ({ item, onClose, onSave }) =
                 )}
               </div>
             </div>
+
+            {/* Folder Warning Box */}
+            {isFolder && (
+              <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400 text-xs space-y-1">
+                <div className="flex items-center gap-1.5 font-bold">
+                  <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-amber-500" />
+                  <span>Ini adalah Link Folder Google Drive!</span>
+                </div>
+                <p className="text-[11px] leading-relaxed">
+                  Folder berisi kumpulan banyak file sehingga tidak bisa langsung ditampilkan sebagai foto.
+                  <br />
+                  <strong>Cara perbaiki:</strong> Buka folder tersebut &gt; Klik kanan pada salah satu file foto &gt; Pilih <strong>"Salin link" (Copy link)</strong> &gt; Tempel link file tersebut di sini.
+                </p>
+                {currentUrl.startsWith('http') && (
+                  <a
+                    href={currentUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-600 dark:text-amber-300 underline mt-1"
+                  >
+                    <span>Buka Folder di Tab Baru</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                )}
+              </div>
+            )}
+
+            {/* Auto Google Drive CDN Success Badge */}
+            {driveFileId && !isFolder && (
+              <div className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-lg">
+                <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                <span>Trik CDN Google Drive Aktif! Link otomatis diubah menjadi resolusi cepat &amp; ringan.</span>
+              </div>
+            )}
+
+            {/* Guide Accordion */}
+            {showDriveGuide && (
+              <div className="p-3 rounded-lg bg-slate-100 dark:bg-[#0F172A] border border-slate-200 dark:border-slate-800 text-xs space-y-1.5 text-slate-700 dark:text-slate-300">
+                <div className="font-bold flex items-center gap-1 text-slate-900 dark:text-white">
+                  <Sparkles className="w-3.5 h-3.5 text-[#E30000]" />
+                  <span>3 Langkah Mudah Pasang Foto dari Google Drive:</span>
+                </div>
+                <ol className="list-decimal pl-4 space-y-1 text-[11px] text-slate-600 dark:text-slate-300">
+                  <li>
+                    <strong>Atur Akses Publik:</strong> Di Google Drive, klik kanan folder/file &gt; <em>Bagikan (Share)</em> &gt; ubah Akses Umum menjadi <strong>"Siapa saja yang memiliki link" (Anyone with the link)</strong>.
+                  </li>
+                  <li>
+                    <strong>Ambil Link File Foto (Bukan Folder):</strong> Masuk ke dalam folder, klik kanan pada <em>file foto alat yang bersangkutan</em> &gt; pilih <strong>"Salin link" (Copy link)</strong>.
+                  </li>
+                  <li>
+                    <strong>Tempel di sini:</strong> Paste link file tersebut ke kolom di atas. Sistem kami otomatis mengonversinya menjadi URL CDN Google berkecepatan tinggi!
+                  </li>
+                </ol>
+              </div>
+            )}
+
             <p className="text-[10.5px] text-slate-400">
-              * Masukkan tautan gambar langsung agar kru studio dapat mengenali alat secara visual.
+              * Kru dapat mengenali peralatan secara instan melalui foto di kartu dan daftar inventaris.
             </p>
           </div>
 
