@@ -16,7 +16,8 @@ import {
   Laptop, 
   Sliders, 
   Layers, 
-  Image as ImageIcon
+  Image as ImageIcon,
+  Trash2
 } from 'lucide-react';
 import { InventarisItem, KondisiAlat, Role } from '../types/inventory';
 import { formatRupiah } from '../lib/dateUtils';
@@ -29,6 +30,7 @@ interface PeralatanTabProps {
   onEditItem: (item: InventarisItem) => void;
   onBookItem: (item: InventarisItem) => void;
   onAddNewItem: () => void;
+  onDeleteItem?: (item: InventarisItem) => void;
 }
 
 export const PeralatanTab: React.FC<PeralatanTabProps> = ({
@@ -36,7 +38,8 @@ export const PeralatanTab: React.FC<PeralatanTabProps> = ({
   currentRole,
   onEditItem,
   onBookItem,
-  onAddNewItem
+  onAddNewItem,
+  onDeleteItem
 }) => {
   const [search, setSearch] = useState('');
   const [selectedKategori, setSelectedKategori] = useState<string>('all');
@@ -322,13 +325,24 @@ export const PeralatanTab: React.FC<PeralatanTabProps> = ({
                               </div>
 
                               {canEdit && (
-                                <button
-                                  onClick={() => onEditItem(item)}
-                                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700/60 transition-colors opacity-80 group-hover:opacity-100 cursor-pointer shrink-0"
-                                  title="Edit Data & Foto Alat"
-                                >
-                                  <Edit2 className="w-3.5 h-3.5" />
-                                </button>
+                                <div className="flex items-center gap-0.5 shrink-0">
+                                  <button
+                                    onClick={() => onEditItem(item)}
+                                    className="p-1.5 rounded-lg text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700/60 transition-colors opacity-80 group-hover:opacity-100 cursor-pointer"
+                                    title="Edit Data & Foto Alat"
+                                  >
+                                    <Edit2 className="w-3.5 h-3.5" />
+                                  </button>
+                                  {onDeleteItem && (
+                                    <button
+                                      onClick={() => onDeleteItem(item)}
+                                      className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors opacity-80 group-hover:opacity-100 cursor-pointer"
+                                      title="Hapus Alat"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  )}
+                                </div>
                               )}
                             </div>
 
@@ -440,13 +454,24 @@ export const PeralatanTab: React.FC<PeralatanTabProps> = ({
                         </div>
 
                         {canEdit && (
-                          <button
-                            onClick={() => onEditItem(item)}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-800 dark:hover:text-white transition-colors cursor-pointer"
-                            title="Edit"
-                          >
-                            <Edit2 className="w-3.5 h-3.5" />
-                          </button>
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => onEditItem(item)}
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-800 dark:hover:text-white transition-colors cursor-pointer"
+                              title="Edit"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                            {onDeleteItem && (
+                              <button
+                                onClick={() => onDeleteItem(item)}
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
+                                title="Hapus Alat"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
                         )}
 
                         <button

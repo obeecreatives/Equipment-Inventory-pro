@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Save, Box, Image as ImageIcon, CheckCircle2, AlertTriangle, Folder, HelpCircle, ExternalLink, Sparkles } from 'lucide-react';
+import { X, Save, Box, Image as ImageIcon, CheckCircle2, AlertTriangle, Folder, HelpCircle, ExternalLink, Sparkles, Trash2 } from 'lucide-react';
 import { InventarisItem, KondisiAlat } from '../../types/inventory';
 import { formatDriveImageUrl, isGoogleDriveFolder, extractDriveFileId } from '../../lib/imageUtils';
 
@@ -7,9 +7,10 @@ interface ItemModalProps {
   item: InventarisItem | null;
   onClose: () => void;
   onSave: (item: Partial<InventarisItem>) => void;
+  onDelete?: (itemId: string) => void;
 }
 
-export const ItemModal: React.FC<ItemModalProps> = ({ item, onClose, onSave }) => {
+export const ItemModal: React.FC<ItemModalProps> = ({ item, onClose, onSave, onDelete }) => {
   const isEdit = !!item?.id;
   const [showDriveGuide, setShowDriveGuide] = useState(false);
 
@@ -322,21 +323,36 @@ export const ItemModal: React.FC<ItemModalProps> = ({ item, onClose, onSave }) =
           </div>
         </form>
 
-        <div className="px-5 py-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-2.5 bg-slate-50 dark:bg-[#070D19]">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 cursor-pointer"
-          >
-            Batal
-          </button>
-          <button
-            onClick={handleSubmit}
-            className="px-5 py-2 rounded-xl bg-[#E30000] hover:bg-[#DC2626] text-white text-xs sm:text-sm font-bold shadow-md shadow-red-500/20 cursor-pointer flex items-center gap-1.5"
-          >
-            <Save className="w-4 h-4" />
-            <span>{isEdit ? 'Simpan Perubahan' : 'Tambah Alat'}</span>
-          </button>
+        <div className="px-5 py-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2.5 bg-slate-50 dark:bg-[#070D19]">
+          {isEdit && onDelete && item?.id ? (
+            <button
+              type="button"
+              onClick={() => onDelete(item.id)}
+              className="px-3.5 py-2 rounded-xl border border-rose-200 dark:border-rose-900/50 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-xs sm:text-sm font-semibold transition-colors cursor-pointer flex items-center gap-1.5"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Hapus Alat</span>
+            </button>
+          ) : (
+            <div />
+          )}
+
+          <div className="flex items-center gap-2.5">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 cursor-pointer"
+            >
+              Batal
+            </button>
+            <button
+              onClick={handleSubmit}
+              className="px-5 py-2 rounded-xl bg-[#E30000] hover:bg-[#DC2626] text-white text-xs sm:text-sm font-bold shadow-md shadow-red-500/20 cursor-pointer flex items-center gap-1.5"
+            >
+              <Save className="w-4 h-4" />
+              <span>{isEdit ? 'Simpan Perubahan' : 'Tambah Alat'}</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>

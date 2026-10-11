@@ -579,6 +579,18 @@ function saveInventarisItem(item) {
   return sanitizeForClient_({ success: true, id: rowMap['ID'] });
 }
 
+function deleteInventarisItem(id) {
+  const sheet = getSheet_(SHEET_INVENTARIS, INV_HEADERS);
+  const data = sheet.getDataRange().getValues();
+  for (let r = 1; r < data.length; r++) {
+    if (String(data[r][0]) === String(id)) {
+      sheet.deleteRow(r + 1);
+      return sanitizeForClient_({ success: true, id: id });
+    }
+  }
+  return sanitizeForClient_({ success: false, message: 'Item tidak ditemukan.' });
+}
+
 function saveStockOpnameBatch(pic, items) {
   if (!items || !items.length) throw new Error('Belum ada alat yang dicek.');
 
@@ -829,6 +841,8 @@ function doPost(e) {
       responseData = cancelBookingGroup(payload.groupId);
     } else if (action === 'saveInventarisItem') {
       responseData = saveInventarisItem(payload.item);
+    } else if (action === 'deleteInventarisItem') {
+      responseData = deleteInventarisItem(payload.id);
     } else if (action === 'saveStockOpnameBatch') {
       responseData = saveStockOpnameBatch(payload.pic, payload.items);
     } else if (action === 'saveUserAccess') {

@@ -52,6 +52,7 @@ import { StockOpnameModal } from './components/modals/StockOpnameModal';
 import { UserAccessModal } from './components/modals/UserAccessModal';
 import { GasCenterModal } from './components/modals/GasCenterModal';
 import { HelpModal } from './components/modals/HelpModal';
+import { ConfirmModal, ConfirmDialogOptions } from './components/modals/ConfirmModal';
 
 export default function App() {
   // Theme & Layout Preferences - Mode Gelap sebagai default
@@ -95,6 +96,40 @@ export default function App() {
   const [showUserModal, setShowUserModal] = useState<boolean>(false);
   const [showGasCenterModal, setShowGasCenterModal] = useState<boolean>(false);
   const [showHelpModal, setShowHelpModal] = useState<boolean>(false);
+
+  // Global Centered Modal Dialog State ("obeecreatives says")
+  const [confirmState, setConfirmState] = useState<{
+    isOpen: boolean;
+    options: ConfirmDialogOptions;
+    resolve: (value: boolean) => void;
+  } | null>(null);
+
+  const showConfirm = useCallback((options: ConfirmDialogOptions): Promise<boolean> => {
+    return new Promise(resolve => {
+      setConfirmState({
+        isOpen: true,
+        options: {
+          headerText: 'obeecreatives says',
+          ...options,
+        },
+        resolve,
+      });
+    });
+  }, []);
+
+  const handleConfirmAccept = () => {
+    if (confirmState?.resolve) {
+      confirmState.resolve(true);
+    }
+    setConfirmState(null);
+  };
+
+  const handleConfirmCancel = () => {
+    if (confirmState?.resolve) {
+      confirmState.resolve(false);
+    }
+    setConfirmState(null);
+  };
 
   // Toast stack
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
@@ -407,7 +442,15 @@ export default function App() {
 
   // 4. Cancel Group
   const handleCancelGroup = async (group: BookingGroup) => {
-    if (!window.confirm(`Yakin ingin membatalkan booking paket "${group.untukProyek}"?`)) return;
+    const confirmed = await showConfirm({
+      headerText: 'obeecreatives says',
+      message: `Yakin ingin membatalkan booking paket "${group.untukProyek}"?`,
+      subMessage: `Paket ini berisi ${group.items.length} item peralatan. Status akan diubah menjadi Dibatalkan dan alat kembali tersedia di studio.`,
+      confirmText: 'Ya, Batalkan Paket',
+      cancelText: 'Kembali',
+      type: 'danger'
+    });
+    if (!confirmed) return;
 
     setBookings(prev => prev.map(b => {
       if (b.groupId === group.groupId) {
@@ -458,6 +501,34 @@ export default function App() {
       await postToGas('saveInventarisItem', { item: newItem });
     } catch (e) {
       enqueueOutbox('saveInventarisItem', { item: newItem });
+    }
+  };
+
+  // 5b. Delete Equipment Item
+  const handleDeleteItem = async (itemOrId: InventarisItem | string) => {
+    const itemId = typeof itemOrId === 'string' ? itemOrId : itemOrId.id;
+    const targetItem = inventaris.find(i => i.id === itemId) || (typeof itemOrId !== 'string' ? itemOrId : null);
+    const itemName = targetItem?.namaBarang || 'alat ini';
+
+    const confirmed = await showConfirm({
+      headerText: 'obeecreatives says',
+      message: `Yakin ingin menghapus alat "${itemName}"?`,
+      subMessage: 'Data alat ini beserta pencatatannya akan dihapus dari sistem inventaris.',
+      confirmText: 'Ya, Hapus Alat',
+      cancelText: 'Batal',
+      type: 'danger'
+    });
+    if (!confirmed) return;
+
+    setInventaris(prev => prev.filter(i => i.id !== itemId));
+    setShowNewItemModal(false);
+    setItemModalTarget(null);
+    addToast(`Alat "${itemName}" berhasil dihapus`, 'info');
+
+    try {
+      await postToGas('deleteInventarisItem', { id: itemId });
+    } catch (e) {
+      enqueueOutbox('deleteInventarisItem', { id: itemId });
     }
   };
 
@@ -546,8 +617,21 @@ export default function App() {
   };
 
   const handleDeleteUser = async (userId: string) => {
+    const targetUser = users.find(u => u.id === userId);
+    const userLabel = targetUser?.nama ? `${targetUser.nama} (${targetUser.email})` : (targetUser?.email || 'pengguna ini');
+
+    const confirmed = await showConfirm({
+      headerText: 'obeecreatives says',
+      message: `Yakin ingin menghapus akses untuk ${userLabel}?`,
+      subMessage: 'Pengguna ini tidak akan dapat login lagi ke Workspace OS.',
+      confirmText: 'Ya, Hapus Pengguna',
+      cancelText: 'Batal',
+      type: 'danger'
+    });
+    if (!confirmed) return;
+
     setUsers(prev => prev.filter(u => u.id !== userId));
-    addToast('Pengguna dihapus');
+    addToast('Pengguna dihapus', 'info');
 
     try {
       await postToGas('deleteUserAccess', { id: userId });
@@ -715,6 +799,7 @@ export default function App() {
                 setItemModalTarget(null);
                 setShowNewItemModal(true);
               }}
+              onDeleteItem={handleDeleteItem}
             />
           )}
 
@@ -800,6 +885,7 @@ export default function App() {
             setItemModalTarget(null);
           }}
           onSave={handleSaveItem}
+          onDelete={handleDeleteItem}
         />
       )}
 
@@ -831,6 +917,14 @@ export default function App() {
       {showHelpModal && (
         <HelpModal onClose={() => setShowHelpModal(false)} />
       )}
+
+      {/* Global Centered Confirmation Modal ("obeecreatives says") */}
+      <ConfirmModal
+        isOpen={!!confirmState?.isOpen}
+        options={confirmState?.options || null}
+        onConfirm={handleConfirmAccept}
+        onCancel={handleConfirmCancel}
+      />
     </div>
   );
 }
