@@ -59,7 +59,11 @@ export const StockOpnameModal: React.FC<StockOpnameModalProps> = ({
 
   const filteredRows = rows
     .map((r, originalIdx) => ({ ...r, originalIdx }))
-    .filter(r => !search || r.namaBarang.toLowerCase().includes(search.toLowerCase()) || r.kategori.toLowerCase().includes(search.toLowerCase()));
+    .filter(r => {
+      if (!search) return true;
+      const q = search.toLowerCase().trim();
+      return String(r.namaBarang || '').toLowerCase().includes(q) || String(r.kategori || '').toLowerCase().includes(q);
+    });
 
   const totalDicek = rows.filter(r => r.checked).length;
   const totalSelisih = rows.filter(r => r.checked && r.qtyAktual !== r.qtySistem).length;

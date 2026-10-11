@@ -57,16 +57,27 @@ export const PeralatanTab: React.FC<PeralatanTabProps> = ({
 
   // Filter items
   const filteredItems = useMemo(() => {
-    return items.filter(i => {
-      const matchSearch = 
-        !search ||
-        i.namaBarang.toLowerCase().includes(search.toLowerCase()) ||
-        i.kategori.toLowerCase().includes(search.toLowerCase()) ||
-        i.noSeri.toLowerCase().includes(search.toLowerCase()) ||
-        (i.lokasiSimpan && i.lokasiSimpan.toLowerCase().includes(search.toLowerCase()));
+    const q = (search || '').toLowerCase().trim();
 
-      const matchKategori = selectedKategori === 'all' || i.kategori === selectedKategori;
-      const matchKondisi = selectedKondisi === 'all' || i.kondisiAlat === selectedKondisi;
+    return items.filter(i => {
+      if (!i) return false;
+
+      const nama = String(i.namaBarang || '').toLowerCase();
+      const kat = String(i.kategori || '').toLowerCase();
+      const seri = String(i.noSeri || '').toLowerCase();
+      const lok = String(i.lokasiSimpan || '').toLowerCase();
+      const ket = String(i.keterangan || '').toLowerCase();
+
+      const matchSearch =
+        !q ||
+        nama.includes(q) ||
+        kat.includes(q) ||
+        seri.includes(q) ||
+        lok.includes(q) ||
+        ket.includes(q);
+
+      const matchKategori = selectedKategori === 'all' || String(i.kategori || '') === selectedKategori;
+      const matchKondisi = selectedKondisi === 'all' || String(i.kondisiAlat || '') === selectedKondisi;
 
       return matchSearch && matchKategori && matchKondisi;
     });

@@ -68,13 +68,16 @@ export const BookingTab: React.FC<BookingTabProps> = ({
 
       // Filter search
       if (search) {
-        const q = search.toLowerCase();
-        const matchProject = g.untukProyek.toLowerCase().includes(q);
-        const matchForm = (g.nomorFormulir || '').toLowerCase().includes(q);
+        const q = search.toLowerCase().trim();
+        const matchProject = String(g.untukProyek || '').toLowerCase().includes(q);
+        const matchForm = String(g.nomorFormulir || '').toLowerCase().includes(q);
         const matchBorrower = 
-          (g.dipesanOleh && g.dipesanOleh.toLowerCase().includes(q)) ||
-          (g.namaPeminjamEksternal && g.namaPeminjamEksternal.toLowerCase().includes(q));
-        const matchItems = g.items.some(i => i.namaBarang.toLowerCase().includes(q) || i.kategori.toLowerCase().includes(q));
+          String(g.dipesanOleh || '').toLowerCase().includes(q) ||
+          String(g.namaPeminjamEksternal || '').toLowerCase().includes(q);
+        const matchItems = (g.items || []).some(i => 
+          String(i.namaBarang || '').toLowerCase().includes(q) || 
+          String(i.kategori || '').toLowerCase().includes(q)
+        );
         if (!matchProject && !matchForm && !matchBorrower && !matchItems) return false;
       }
 

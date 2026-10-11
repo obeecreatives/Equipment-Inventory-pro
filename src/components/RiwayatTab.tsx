@@ -18,14 +18,17 @@ export const RiwayatTab: React.FC<RiwayatTabProps> = ({ groups, onExportPdf }) =
     return groups
       .filter(g => {
         if (searchPeminjam) {
-          const q = searchPeminjam.toLowerCase();
-          const nama = (g.kategoriPeminjam === 'Eksternal' ? g.namaPeminjamEksternal : g.dipesanOleh) || '';
-          if (!nama.toLowerCase().includes(q)) return false;
+          const q = searchPeminjam.toLowerCase().trim();
+          const nama = String(g.kategoriPeminjam === 'Eksternal' ? g.namaPeminjamEksternal : g.dipesanOleh || '').toLowerCase();
+          if (!nama.includes(q)) return false;
         }
 
         if (searchAlat) {
-          const q = searchAlat.toLowerCase();
-          const match = g.items.some(i => i.namaBarang.toLowerCase().includes(q) || i.kategori.toLowerCase().includes(q));
+          const q = searchAlat.toLowerCase().trim();
+          const match = (g.items || []).some(i => 
+            String(i.namaBarang || '').toLowerCase().includes(q) || 
+            String(i.kategori || '').toLowerCase().includes(q)
+          );
           if (!match) return false;
         }
 
