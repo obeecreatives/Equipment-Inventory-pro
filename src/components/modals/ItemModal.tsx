@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { X, Save, Box, Image as ImageIcon, CheckCircle2, AlertTriangle, Folder, HelpCircle, ExternalLink, Sparkles, Trash2 } from 'lucide-react';
+import { X, Save, Box, Image as ImageIcon, CheckCircle2, AlertTriangle, Folder, HelpCircle, ExternalLink, Sparkles, Trash2, ZoomIn } from 'lucide-react';
 import { InventarisItem, KondisiAlat } from '../../types/inventory';
 import { formatDriveImageUrl, isGoogleDriveFolder, extractDriveFileId } from '../../lib/imageUtils';
+import { ImageInspectorModal } from './ImageInspectorModal';
 
 interface ItemModalProps {
   item: InventarisItem | null;
@@ -13,6 +14,7 @@ interface ItemModalProps {
 export const ItemModal: React.FC<ItemModalProps> = ({ item, onClose, onSave, onDelete }) => {
   const isEdit = !!item?.id;
   const [showDriveGuide, setShowDriveGuide] = useState(false);
+  const [showPreviewInspector, setShowPreviewInspector] = useState(false);
 
   const [formData, setFormData] = useState<Partial<InventarisItem>>({
     id: item?.id || '',
@@ -53,7 +55,8 @@ export const ItemModal: React.FC<ItemModalProps> = ({ item, onClose, onSave, onD
   const previewImgSrc = formatDriveImageUrl(currentUrl, 400);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-150">
+    <>
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-150">
       <div 
         className="w-full max-w-lg max-h-[92vh] flex flex-col rounded-2xl border shadow-2xl bg-white dark:bg-[#0F172A] border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white overflow-hidden"
         onClick={e => e.stopPropagation()}
@@ -105,18 +108,33 @@ export const ItemModal: React.FC<ItemModalProps> = ({ item, onClose, onSave, onD
                 className="flex-1 px-3 py-1.5 rounded-lg text-xs border bg-white dark:bg-[#0F172A] border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:border-[#E30000]"
               />
 
-              {/* Live Preview Box */}
-              <div className="w-12 h-12 rounded-lg bg-slate-200 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 overflow-hidden shrink-0 flex items-center justify-center text-slate-400">
+              {/* Live Preview Box with Click-to-Inspect */}
+              <div 
+                onClick={() => {
+                  if (previewImgSrc && !isFolder) {
+                    setShowPreviewInspector(true);
+                  }
+                }}
+                className={`w-12 h-12 rounded-lg bg-slate-200 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 overflow-hidden shrink-0 flex items-center justify-center text-slate-400 relative group/box ${
+                  previewImgSrc && !isFolder ? 'cursor-zoom-in' : ''
+                }`}
+                title={previewImgSrc && !isFolder ? 'Klik untuk inspeksi gambar detail' : undefined}
+              >
                 {previewImgSrc && !isFolder ? (
-                  <img
-                    src={previewImgSrc}
-                    alt="Preview"
-                    referrerPolicy="no-referrer"
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      (e.target as HTMLElement).style.display = 'none';
-                    }}
-                  />
+                  <>
+                    <img
+                      src={previewImgSrc}
+                      alt="Preview"
+                      referrerPolicy="no-referrer"
+                      className="w-full h-full object-cover group-hover/box:scale-110 transition-transform"
+                      onError={(e) => {
+                        (e.target as HTMLElement).style.display = 'none';
+                      }}
+                    />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/box:opacity-100 transition-opacity flex items-center justify-center text-white pointer-events-none">
+                      <ZoomIn className="w-3.5 h-3.5" />
+                    </div>
+                  </>
                 ) : (
                   <ImageIcon className="w-5 h-5 opacity-50" />
                 )}
@@ -356,5 +374,27 @@ export const ItemModal: React.FC<ItemModalProps> = ({ item, onClose, onSave, onD
         </div>
       </div>
     </div>
-  );
+
+    {showPreviewInspector && (
+      <ImageInspectorModal
+        item={{
+          id: formData.id || 'preview',
+          namaBarang: formData.namaBarang || 'Pratinjau Foto Alat',
+          kategori: formData.kategori || 'KAMERA',
+          noSeri: formData.noSeri || '',
+          satuan: formData.satuan || 'Pcs',
+          qtyTotal: formData.qtyTotal || 1,
+          hargaPerolehan: formData.hargaPerolehan || 0,
+          hargaSewa: formData.hargaSewa || 0,
+          lokasiSimpan: formData.lokasiSimpan || '',
+          kondisiAlat: formData.kondisiAlat || 'Baik',
+          keterangan: formData.keterangan || '',
+          fotoUrl: formData.fotoUrl || ''
+        }}
+        isOpen={showPreviewInspector}
+        onClose={() => setShowPreviewInspector(false)}
+      />
+    )}
+  </>
+);
 };

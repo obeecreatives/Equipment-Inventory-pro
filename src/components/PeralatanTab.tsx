@@ -17,12 +17,14 @@ import {
   Sliders, 
   Layers, 
   Image as ImageIcon,
-  Trash2
+  Trash2,
+  ZoomIn
 } from 'lucide-react';
 import { InventarisItem, KondisiAlat, Role } from '../types/inventory';
 import { formatRupiah } from '../lib/dateUtils';
 import { getViewMode, setViewMode } from '../lib/storage';
 import { formatDriveImageUrl } from '../lib/imageUtils';
+import { ImageInspectorModal } from './modals/ImageInspectorModal';
 
 interface PeralatanTabProps {
   items: InventarisItem[];
@@ -45,6 +47,7 @@ export const PeralatanTab: React.FC<PeralatanTabProps> = ({
   const [selectedKategori, setSelectedKategori] = useState<string>('all');
   const [selectedKondisi, setSelectedKondisi] = useState<string>('all');
   const [viewMode, setViewModeState] = useState<'grid' | 'compact'>(() => getViewMode());
+  const [inspectingItem, setInspectingItem] = useState<InventarisItem | null>(null);
 
   const canEdit = currentRole === 'Admin' || currentRole === 'Project Manager' || currentRole === 'Site Engineer';
   const showFinancials = currentRole === 'Admin' || currentRole === 'Project Manager';
@@ -287,30 +290,53 @@ export const PeralatanTab: React.FC<PeralatanTabProps> = ({
                         className="rounded-2xl border bg-white dark:bg-[#1E293B] border-slate-200 dark:border-slate-800/80 shadow-sm hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700 transition-all flex flex-col justify-between group overflow-hidden"
                       >
                         <div>
-                          {/* Image Thumbnail Container (Lazy Loaded & Responsive) */}
-                          <div className="relative w-full aspect-16/9 bg-slate-100 dark:bg-[#0F172A] overflow-hidden border-b border-slate-100 dark:border-slate-800/60 flex items-center justify-center">
+                          {/* Image Thumbnail Container (Click-to-Expand with Inspector) */}
+                          <div
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setInspectingItem(item);
+                            }}
+                            className="relative w-full aspect-16/9 bg-slate-100 dark:bg-[#0F172A] overflow-hidden border-b border-slate-100 dark:border-slate-800/60 flex items-center justify-center cursor-zoom-in group/img"
+                            title="Klik untuk periksa detail foto & gambar alat"
+                          >
                             {renderCardImage(item)}
 
+                            {/* Hover Overlay with Magnifying Glass & Text */}
+                            <div className="absolute inset-0 bg-slate-950/45 backdrop-blur-[2px] opacity-0 group-hover/img:opacity-100 transition-all duration-200 flex flex-col items-center justify-center gap-1.5 text-white pointer-events-none z-10">
+                              <div className="w-10 h-10 rounded-full bg-white/25 backdrop-blur-md flex items-center justify-center border border-white/40 shadow-xl transform group-hover/img:scale-110 transition-transform">
+                                <ZoomIn className="w-5 h-5 text-white drop-shadow" />
+                              </div>
+                              <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-slate-950/80 backdrop-blur-md border border-white/20 text-white shadow-lg tracking-wide">
+                                Klik untuk periksa detail
+                              </span>
+                            </div>
+
                             {/* Status Tag Overlay on Image */}
-                            <div className="absolute top-2.5 left-2.5">
+                            <div className="absolute top-2.5 left-2.5 z-10 pointer-events-none">
                               <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full backdrop-blur-md shadow-sm border ${getKondisiBadge(item.kondisiAlat)}`}>
                                 {item.kondisiAlat}
                               </span>
                             </div>
 
                             {/* Qty Badge on Image */}
-                            <div className="absolute top-2.5 right-2.5">
+                            <div className="absolute top-2.5 right-2.5 z-10 pointer-events-none">
                               <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-900/80 backdrop-blur-md text-white border border-white/20 shadow-sm">
                                 {item.qtyTotal} {item.satuan}
                               </span>
                             </div>
                           </div>
 
-                          {/* Card Content Body */}
-                          <div className="p-4 pb-2">
+                          {/* Card Content Body - Click on text area opens Edit Modal if canEdit */}
+                          <div
+                            onClick={() => {
+                              if (canEdit) onEditItem(item);
+                            }}
+                            className={`p-4 pb-2 ${canEdit ? 'cursor-pointer hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors' : ''}`}
+                            title={canEdit ? 'Klik untuk edit informasi alat' : undefined}
+                          >
                             <div className="flex items-start justify-between gap-2 mb-1.5">
-                              <div className="min-w-0">
-                                <h4 className="font-bold text-base text-slate-900 dark:text-white truncate" title={item.namaBarang}>
+                              <div className="min-w-0 flex-1">
+                                <h4 className="font-bold text-base text-slate-900 dark:text-white truncate group-hover:text-[#E30000] transition-colors" title={item.namaBarang}>
                                   {item.namaBarang}
                                 </h4>
                                 {item.noSeri ? (
@@ -325,9 +351,12 @@ export const PeralatanTab: React.FC<PeralatanTabProps> = ({
                               </div>
 
                               {canEdit && (
-                                <div className="flex items-center gap-0.5 shrink-0">
+                                <div className="flex items-center gap-0.5 shrink-0" onClick={e => e.stopPropagation()}>
                                   <button
-                                    onClick={() => onEditItem(item)}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      onEditItem(item);
+                                    }}
                                     className="p-1.5 rounded-lg text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700/60 transition-colors opacity-80 group-hover:opacity-100 cursor-pointer"
                                     title="Edit Data & Foto Alat"
                                   >
@@ -335,7 +364,10 @@ export const PeralatanTab: React.FC<PeralatanTabProps> = ({
                                   </button>
                                   {onDeleteItem && (
                                     <button
-                                      onClick={() => onDeleteItem(item)}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        onDeleteItem(item);
+                                      }}
                                       className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors opacity-80 group-hover:opacity-100 cursor-pointer"
                                       title="Hapus Alat"
                                     >
@@ -403,13 +435,20 @@ export const PeralatanTab: React.FC<PeralatanTabProps> = ({
                       className="p-3 sm:p-3.5 flex items-center justify-between gap-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
                     >
                       <div className="flex items-center gap-3 min-w-0">
-                        {/* Small Avatar Thumbnail */}
-                        <div className="w-11 h-11 rounded-lg bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 overflow-hidden shrink-0 flex items-center justify-center">
+                        {/* Small Avatar Thumbnail with Click-to-Inspect */}
+                        <div
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setInspectingItem(item);
+                          }}
+                          className="w-11 h-11 rounded-lg bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 overflow-hidden shrink-0 flex items-center justify-center cursor-zoom-in relative group/thumb"
+                          title="Klik untuk periksa detail foto"
+                        >
                           {item.fotoUrl ? (
                             <img 
                               src={formatDriveImageUrl(item.fotoUrl, 200)} 
                               alt={item.namaBarang} 
-                              className="w-full h-full object-cover" 
+                              className="w-full h-full object-cover group-hover/thumb:scale-110 transition-transform" 
                               loading="lazy" 
                               referrerPolicy="no-referrer"
                               onError={(e) => {
@@ -419,10 +458,19 @@ export const PeralatanTab: React.FC<PeralatanTabProps> = ({
                           ) : (
                             <ImageIcon className="w-4 h-4 text-slate-400" />
                           )}
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/thumb:opacity-100 transition-opacity flex items-center justify-center text-white pointer-events-none">
+                            <ZoomIn className="w-4 h-4 drop-shadow" />
+                          </div>
                         </div>
 
-                        <div className="min-w-0">
-                          <div className="font-bold text-sm text-slate-900 dark:text-white truncate">
+                        <div 
+                          className={`min-w-0 flex-1 ${canEdit ? 'cursor-pointer' : ''}`}
+                          onClick={() => {
+                            if (canEdit) onEditItem(item);
+                          }}
+                          title={canEdit ? 'Klik untuk edit informasi alat' : undefined}
+                        >
+                          <div className="font-bold text-sm text-slate-900 dark:text-white truncate hover:text-[#E30000] transition-colors">
                             {item.namaBarang}
                           </div>
                           <div className="flex items-center gap-2 text-xs text-slate-400 flex-wrap">
@@ -456,15 +504,21 @@ export const PeralatanTab: React.FC<PeralatanTabProps> = ({
                         {canEdit && (
                           <div className="flex items-center gap-1">
                             <button
-                              onClick={() => onEditItem(item)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onEditItem(item);
+                              }}
                               className="p-1.5 rounded-lg text-slate-400 hover:text-slate-800 dark:hover:text-white transition-colors cursor-pointer"
-                              title="Edit"
+                              title="Edit Data & Foto"
                             >
                               <Edit2 className="w-3.5 h-3.5" />
                             </button>
                             {onDeleteItem && (
                               <button
-                                onClick={() => onDeleteItem(item)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onDeleteItem(item);
+                                }}
                                 className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
                                 title="Hapus Alat"
                               >
@@ -475,7 +529,10 @@ export const PeralatanTab: React.FC<PeralatanTabProps> = ({
                         )}
 
                         <button
-                          onClick={() => onBookItem(item)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onBookItem(item);
+                          }}
                           className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-[#E30000] hover:text-white text-xs font-bold transition-colors cursor-pointer"
                         >
                           Booking
@@ -488,6 +545,19 @@ export const PeralatanTab: React.FC<PeralatanTabProps> = ({
             </div>
           );
         })
+      )}
+
+      {/* Fullscreen Smart Image Inspector Modal */}
+      {inspectingItem && (
+        <ImageInspectorModal
+          item={inspectingItem}
+          isOpen={!!inspectingItem}
+          onClose={() => setInspectingItem(null)}
+          onEditItem={onEditItem}
+          canEdit={canEdit}
+          itemsList={filteredItems}
+          onNavigateItem={(newItem) => setInspectingItem(newItem)}
+        />
       )}
     </div>
   );
