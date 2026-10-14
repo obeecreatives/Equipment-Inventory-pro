@@ -43,6 +43,11 @@ export function formatDriveImageUrl(url?: string, width = 800): string {
   if (!url || typeof url !== 'string') return '';
   const trimmed = url.trim();
 
+  // Jika ini data URL (base64 image hasil kompresi WebP), kembalikan langsung
+  if (trimmed.startsWith('data:image/')) {
+    return trimmed;
+  }
+
   // Jika ini link folder Google Drive, kembalikan apa adanya (akan terdeteksi sebagai folder)
   if (isGoogleDriveFolder(trimmed)) {
     return trimmed;
@@ -219,4 +224,187 @@ export async function downloadAssetImage(url: string, filename = 'foto-peralatan
     document.body.removeChild(a);
     return false;
   }
+}
+
+export type BrandType = 'canva' | 'capcut' | 'figma' | 'gdrive-folder' | 'none';
+
+export interface BrandBannerConfig {
+  brand: BrandType;
+  title: string;
+  tagline: string;
+  badgeLabel: string;
+  buttonLabel: string;
+  gradientClass: string;
+  badgeColorClass: string;
+  accentBorder: string;
+  url: string;
+}
+
+/**
+ * Cek apakah URL merupakan lembar kerja platform interaktif yang membutuhkan Smart Brand Banner
+ */
+export function getBrandBannerConfig(url?: string): BrandBannerConfig | null {
+  if (!url || typeof url !== 'string') return null;
+  const trimmed = url.trim();
+  if (!trimmed || trimmed.startsWith('data:image/')) return null;
+
+  // Cek Canva
+  if (trimmed.includes('canva.com/design') || trimmed.includes('canva.com')) {
+    return {
+      brand: 'canva',
+      title: 'Proyek Desain Canva',
+      tagline: 'Lembar kerja desain interaktif Canva',
+      badgeLabel: 'Canva Design',
+      buttonLabel: 'Buka di Canva',
+      gradientClass: 'from-[#00C4CC] via-[#5C2D91] to-[#7D2AE8]',
+      badgeColorClass: 'bg-cyan-400/20 text-cyan-200 border-cyan-400/30',
+      accentBorder: 'border-cyan-500/40',
+      url: trimmed
+    };
+  }
+
+  // Cek CapCut
+  if (trimmed.includes('capcut.com')) {
+    return {
+      brand: 'capcut',
+      title: 'Proyek Video CapCut',
+      tagline: 'Timeline & footage video CapCut',
+      badgeLabel: 'CapCut Video',
+      buttonLabel: 'Buka di CapCut',
+      gradientClass: 'from-neutral-950 via-zinc-900 to-[#121212]',
+      badgeColorClass: 'bg-rose-500/20 text-rose-300 border-rose-500/30',
+      accentBorder: 'border-rose-500/40',
+      url: trimmed
+    };
+  }
+
+  // Cek Figma
+  if (trimmed.includes('figma.com/file') || trimmed.includes('figma.com/design') || trimmed.includes('figma.com/proto') || trimmed.includes('figma.com')) {
+    return {
+      brand: 'figma',
+      title: 'Proyek Desain Figma',
+      tagline: 'Kanvas UI/UX vektor Figma',
+      badgeLabel: 'Figma Canvas',
+      buttonLabel: 'Buka di Figma',
+      gradientClass: 'from-slate-950 via-purple-950 to-neutral-900',
+      badgeColorClass: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
+      accentBorder: 'border-purple-500/40',
+      url: trimmed
+    };
+  }
+
+  // Cek Folder Google Drive
+  if (isGoogleDriveFolder(trimmed)) {
+    return {
+      brand: 'gdrive-folder',
+      title: 'Folder Google Drive',
+      tagline: 'Galeri berkas & kumpulan foto aset studio',
+      badgeLabel: 'Drive Folder',
+      buttonLabel: 'Buka Folder Drive',
+      gradientClass: 'from-amber-600 via-amber-700 to-yellow-800',
+      badgeColorClass: 'bg-amber-400/20 text-amber-200 border-amber-400/30',
+      accentBorder: 'border-amber-500/40',
+      url: trimmed
+    };
+  }
+
+  return null;
+}
+
+export interface CompressionResult {
+  dataUrl: string;
+  originalSizeKb: number;
+  compressedSizeKb: number;
+  width: number;
+  height: number;
+  format: 'webp' | 'jpeg';
+  savedPercentage: number;
+}
+
+/**
+ * Mengompresi file gambar dari galeri HP / laptop secara otomatis di browser menjadi format WebP mini (~20-40 KB).
+ * Memungkinkan penyimpanan foto langsung di Google Sheets tanpa overload kuota sel atau membuat lambat.
+ */
+export async function compressImageToWebP(
+  file: File,
+  maxWidth = 800,
+  maxHeight = 800,
+  initialQuality = 0.8
+): Promise<CompressionResult> {
+  const originalSizeKb = Math.round((file.size / 1024) * 10) / 10;
+
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Gagal membaca file gambar'));
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('Format file tidak didukung sebagai gambar'));
+      img.onload = () => {
+        let targetWidth = img.width;
+        let targetHeight = img.height;
+
+        // Hitung scaling proporsional menjaga aspect ratio
+        if (targetWidth > maxWidth || targetHeight > maxHeight) {
+          const ratio = Math.min(maxWidth / targetWidth, maxHeight / targetHeight);
+          targetWidth = Math.round(targetWidth * ratio);
+          targetHeight = Math.round(targetHeight * ratio);
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = targetWidth;
+        canvas.height = targetHeight;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          reject(new Error('Gagal menginisialisasi canvas'));
+          return;
+        }
+
+        // Kualitas sampling tinggi
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+
+        // Ekspor ke WebP (fallback otomatis ke JPEG jika browser belum mendukung ekspor webp)
+        let format: 'webp' | 'jpeg' = 'webp';
+        let quality = initialQuality;
+        let dataUrl = canvas.toDataURL('image/webp', quality);
+
+        if (!dataUrl.startsWith('data:image/webp')) {
+          dataUrl = canvas.toDataURL('image/jpeg', quality);
+          format = 'jpeg';
+        }
+
+        // Estimasi ukuran dari base64 string
+        let base64Length = dataUrl.length - (dataUrl.indexOf(',') + 1);
+        let compressedSizeKb = Math.round(((base64Length * 3) / 4 / 1024) * 10) / 10;
+
+        // Jika ukuran masih > 55KB dan kualitas masih > 0.45, sesuaikan kualitas agar tetap sangat ringan (< 40KB)
+        if (compressedSizeKb > 55 && quality > 0.5) {
+          quality = 0.55;
+          const retryDataUrl = canvas.toDataURL(format === 'webp' ? 'image/webp' : 'image/jpeg', quality);
+          base64Length = retryDataUrl.length - (retryDataUrl.indexOf(',') + 1);
+          compressedSizeKb = Math.round(((base64Length * 3) / 4 / 1024) * 10) / 10;
+          dataUrl = retryDataUrl;
+        }
+
+        const savedPercentage = originalSizeKb > 0
+          ? Math.max(0, Math.round(((originalSizeKb - compressedSizeKb) / originalSizeKb) * 100))
+          : 0;
+
+        resolve({
+          dataUrl,
+          originalSizeKb,
+          compressedSizeKb,
+          width: targetWidth,
+          height: targetHeight,
+          format,
+          savedPercentage
+        });
+      };
+
+      img.src = e.target?.result as string;
+    };
+
+    reader.readAsDataURL(file);
+  });
 }

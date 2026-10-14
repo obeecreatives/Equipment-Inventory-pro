@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Search, ChevronDown, Check, X, Box, Layers, Image as ImageIcon } from 'lucide-react';
 import { InventarisItem } from '../types/inventory';
-import { formatDriveImageUrl } from '../lib/imageUtils';
+import { formatDriveImageUrl, getBrandBannerConfig } from '../lib/imageUtils';
+import { BrandAssetBanner } from './common/BrandAssetBanner';
 
 interface EquipmentComboboxProps {
   items: InventarisItem[];
@@ -153,14 +154,26 @@ export const EquipmentCombobox: React.FC<EquipmentComboboxProps> = ({
       >
         {/* Left Icon / Thumbnail */}
         {selectedItem?.fotoUrl ? (
-          <img
-            src={formatDriveImageUrl(selectedItem.fotoUrl, 100)}
-            alt={selectedItem.namaBarang}
-            className="w-6 h-6 rounded-md object-cover border border-slate-200 dark:border-slate-700 shrink-0"
-            onError={(e) => {
-              (e.currentTarget as HTMLElement).style.display = 'none';
-            }}
-          />
+          (() => {
+            const brandConfig = getBrandBannerConfig(selectedItem.fotoUrl);
+            if (brandConfig) {
+              return (
+                <div className="w-6 h-6 rounded-md overflow-hidden shrink-0 border border-slate-200 dark:border-slate-700">
+                  <BrandAssetBanner config={brandConfig} mode="compact" />
+                </div>
+              );
+            }
+            return (
+              <img
+                src={formatDriveImageUrl(selectedItem.fotoUrl, 100)}
+                alt={selectedItem.namaBarang}
+                className="w-6 h-6 rounded-md object-cover border border-slate-200 dark:border-slate-700 shrink-0"
+                onError={(e) => {
+                  (e.currentTarget as HTMLElement).style.display = 'none';
+                }}
+              />
+            );
+          })()
         ) : (
           <Search className="w-4 h-4 text-slate-400 shrink-0" />
         )}
@@ -302,14 +315,22 @@ export const EquipmentCombobox: React.FC<EquipmentComboboxProps> = ({
                     {/* Thumbnail */}
                     <div className="w-10 h-10 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 overflow-hidden shrink-0 flex items-center justify-center">
                       {item.fotoUrl ? (
-                        <img
-                          src={formatDriveImageUrl(item.fotoUrl, 100)}
-                          alt={item.namaBarang}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            (e.currentTarget as HTMLElement).style.display = 'none';
-                          }}
-                        />
+                        (() => {
+                          const brandConfig = getBrandBannerConfig(item.fotoUrl);
+                          if (brandConfig) {
+                            return <BrandAssetBanner config={brandConfig} mode="compact" />;
+                          }
+                          return (
+                            <img
+                              src={formatDriveImageUrl(item.fotoUrl, 100)}
+                              alt={item.namaBarang}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                (e.currentTarget as HTMLElement).style.display = 'none';
+                              }}
+                            />
+                          );
+                        })()
                       ) : (
                         <Box className="w-5 h-5 text-slate-400" />
                       )}

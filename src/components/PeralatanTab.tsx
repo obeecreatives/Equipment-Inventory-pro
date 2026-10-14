@@ -23,7 +23,8 @@ import {
 import { InventarisItem, KondisiAlat, Role } from '../types/inventory';
 import { formatRupiah } from '../lib/dateUtils';
 import { getViewMode, setViewMode } from '../lib/storage';
-import { formatDriveImageUrl } from '../lib/imageUtils';
+import { formatDriveImageUrl, getBrandBannerConfig } from '../lib/imageUtils';
+import { BrandAssetBanner } from './common/BrandAssetBanner';
 import { ImageInspectorModal } from './modals/ImageInspectorModal';
 
 interface PeralatanTabProps {
@@ -131,6 +132,16 @@ export const PeralatanTab: React.FC<PeralatanTabProps> = ({
   };
 
   const renderCardImage = (item: InventarisItem) => {
+    const brandConfig = getBrandBannerConfig(item.fotoUrl);
+    if (brandConfig) {
+      return (
+        <BrandAssetBanner
+          config={brandConfig}
+          mode="card"
+        />
+      );
+    }
+
     const FallbackIcon = getCategoryFallbackIcon(item.kategori);
     const formattedUrl = formatDriveImageUrl(item.fotoUrl, 800);
 
@@ -445,16 +456,24 @@ export const PeralatanTab: React.FC<PeralatanTabProps> = ({
                           title="Klik untuk periksa detail foto"
                         >
                           {item.fotoUrl ? (
-                            <img 
-                              src={formatDriveImageUrl(item.fotoUrl, 200)} 
-                              alt={item.namaBarang} 
-                              className="w-full h-full object-cover group-hover/thumb:scale-110 transition-transform" 
-                              loading="lazy" 
-                              referrerPolicy="no-referrer"
-                              onError={(e) => {
-                                (e.target as HTMLElement).style.display = 'none';
-                              }}
-                            />
+                            (() => {
+                              const brandConfig = getBrandBannerConfig(item.fotoUrl);
+                              if (brandConfig) {
+                                return <BrandAssetBanner config={brandConfig} mode="compact" />;
+                              }
+                              return (
+                                <img 
+                                  src={formatDriveImageUrl(item.fotoUrl, 200)} 
+                                  alt={item.namaBarang} 
+                                  className="w-full h-full object-cover group-hover/thumb:scale-110 transition-transform" 
+                                  loading="lazy" 
+                                  referrerPolicy="no-referrer"
+                                  onError={(e) => {
+                                    (e.target as HTMLElement).style.display = 'none';
+                                  }}
+                                />
+                              );
+                            })()
                           ) : (
                             <ImageIcon className="w-4 h-4 text-slate-400" />
                           )}
