@@ -47,17 +47,17 @@ export const EquipmentCombobox: React.FC<EquipmentComboboxProps> = ({
 
   // Filter items by search query and category
   const filteredItems = useMemo(() => {
-    const q = searchQuery.toLowerCase().trim();
+    const q = String(searchQuery || '').toLowerCase().trim();
     return items.filter(item => {
       if (categoryFilter !== 'all' && item.kategori !== categoryFilter) {
         return false;
       }
       if (!q) return true;
-      const matchName = (item.namaBarang || '').toLowerCase().includes(q);
-      const matchCat = (item.kategori || '').toLowerCase().includes(q);
-      const matchId = (item.id || '').toLowerCase().includes(q);
-      const matchKet = (item.keterangan || '').toLowerCase().includes(q);
-      const matchNoSeri = (item.noSeri || '').toLowerCase().includes(q);
+      const matchName = String(item.namaBarang || '').toLowerCase().includes(q);
+      const matchCat = String(item.kategori || '').toLowerCase().includes(q);
+      const matchId = String(item.id || '').toLowerCase().includes(q);
+      const matchKet = String(item.keterangan || '').toLowerCase().includes(q);
+      const matchNoSeri = String(item.noSeri || '').toLowerCase().includes(q);
       return matchName || matchCat || matchId || matchKet || matchNoSeri;
     });
   }, [items, searchQuery, categoryFilter]);
@@ -127,7 +127,7 @@ export const EquipmentCombobox: React.FC<EquipmentComboboxProps> = ({
   };
 
   const getCategoryColor = (cat: string) => {
-    const c = (cat || '').toLowerCase();
+    const c = String(cat || '').toLowerCase();
     if (c.includes('kamera')) return 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20';
     if (c.includes('lensa')) return 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20';
     if (c.includes('lighting') || c.includes('lampu')) return 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20';
