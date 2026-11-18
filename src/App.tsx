@@ -843,7 +843,7 @@ function InternalWorkspaceApp({
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-[#0B0F17] text-slate-900 dark:text-slate-100 transition-colors duration-200">
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden flex flex-col bg-slate-50 dark:bg-[#0B0F17] text-slate-900 dark:text-slate-100 transition-colors duration-200">
       {/* Toast Stack */}
       <Toast toasts={toasts} onDismiss={dismissToast} />
 

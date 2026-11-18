@@ -172,33 +172,57 @@ export const PublicPortal: React.FC<PublicPortalProps> = ({ theme, onToggleTheme
   };
 
   return (
-    <div className="min-h-screen flex flex-col transition-colors duration-200 bg-[#F8FAFC] dark:bg-[#0B0F17] text-slate-900 dark:text-slate-100">
-      {/* Clean 3-Zone Top Bar */}
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden flex flex-col transition-colors duration-200 bg-[#F8FAFC] dark:bg-[#0B0F17] text-slate-900 dark:text-slate-100">
+      {/* Responsive Top Bar */}
       <header className="w-full sticky top-0 z-40 border-b bg-white dark:bg-[#070D19] border-slate-200 dark:border-slate-800 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
-          {/* Zone 1: Brand Title */}
-          <div className="flex items-center gap-2.5 whitespace-nowrap shrink-0">
-            <div className="w-8 h-8 rounded-lg bg-[#E30000] flex items-center justify-center text-white font-extrabold text-lg shadow-sm">
-              O
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2.5 sm:py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
+          {/* Row 1 on Mobile / Left Zone on Desktop */}
+          <div className="flex items-center justify-between gap-2 min-w-0">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-[#E30000] flex items-center justify-center text-white font-extrabold text-base sm:text-lg shadow-sm shrink-0">
+                O
+              </div>
+              <div className="flex items-baseline gap-1.5 min-w-0 truncate">
+                <span className="font-extrabold text-base sm:text-xl tracking-tight text-slate-900 dark:text-white truncate">
+                  obee<span className="text-[#E30000]">creatives</span>
+                </span>
+                <span className="hidden md:inline text-xs font-semibold text-slate-400 whitespace-nowrap">
+                  / Portal Booking Alat
+                </span>
+              </div>
             </div>
-            <div className="flex items-baseline gap-1.5">
-              <span className="font-extrabold text-lg sm:text-xl tracking-tight text-slate-900 dark:text-white">
-                obee<span className="text-[#E30000]">creatives</span>
-              </span>
-              <span className="hidden sm:inline text-xs font-semibold text-slate-400">
-                / Portal Booking Alat
-              </span>
+
+            {/* Mobile-only compact utility buttons */}
+            <div className="flex sm:hidden items-center gap-1.5 shrink-0">
+              <button
+                type="button"
+                onClick={loadCatalog}
+                disabled={isLoading}
+                className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                title="Muat ulang stok katalog"
+              >
+                <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin text-[#E30000]' : ''}`} />
+              </button>
+
+              <button
+                type="button"
+                onClick={onToggleTheme}
+                className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                title={theme === 'dark' ? 'Ganti ke Mode Terang' : 'Ganti ke Mode Gelap'}
+              >
+                {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-600" />}
+              </button>
             </div>
           </div>
 
-          {/* Zone 2 & 3: Utility + Primary Action */}
-          <div className="flex items-center gap-2 shrink-0">
+          {/* Row 2 on Mobile / Right Zone on Desktop */}
+          <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
             <button
               type="button"
               onClick={() => setShowStatusModal(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-200 transition-colors cursor-pointer whitespace-nowrap shrink-0"
+              className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-200 transition-colors cursor-pointer whitespace-nowrap"
             >
-              <ClipboardCheck className="w-4 h-4 text-sky-500" />
+              <ClipboardCheck className="w-4 h-4 text-sky-500 shrink-0" />
               <span>Cek Status</span>
             </button>
 
@@ -206,7 +230,7 @@ export const PublicPortal: React.FC<PublicPortalProps> = ({ theme, onToggleTheme
               type="button"
               onClick={loadCatalog}
               disabled={isLoading}
-              className="p-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              className="hidden sm:inline-flex p-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer shrink-0"
               title="Muat ulang stok katalog"
             >
               <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin text-[#E30000]' : ''}`} />
@@ -215,7 +239,7 @@ export const PublicPortal: React.FC<PublicPortalProps> = ({ theme, onToggleTheme
             <button
               type="button"
               onClick={onToggleTheme}
-              className="p-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              className="hidden sm:inline-flex p-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer shrink-0"
               title={theme === 'dark' ? 'Ganti ke Mode Terang' : 'Ganti ke Mode Gelap'}
             >
               {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-600" />}
@@ -224,9 +248,9 @@ export const PublicPortal: React.FC<PublicPortalProps> = ({ theme, onToggleTheme
             <button
               type="button"
               onClick={handleOpenBookSelected}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#E30000] hover:bg-[#DC2626] text-white text-xs sm:text-sm font-bold shadow-md shadow-red-500/20 transition-all cursor-pointer whitespace-nowrap shrink-0"
+              className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-[#E30000] hover:bg-[#DC2626] text-white text-xs sm:text-sm font-bold shadow-md shadow-red-500/20 transition-all cursor-pointer whitespace-nowrap"
             >
-              <Bookmark className="w-4 h-4" />
+              <Bookmark className="w-4 h-4 shrink-0" />
               <span>
                 Booking Alat{selectedPackageIds.length > 0 ? ` (${selectedPackageIds.length})` : ''}
               </span>
@@ -236,12 +260,12 @@ export const PublicPortal: React.FC<PublicPortalProps> = ({ theme, onToggleTheme
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 space-y-6 pb-16">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 py-4 sm:py-6 space-y-5 sm:space-y-6 pb-16">
         {/* Intro & Search Filter Toolbar */}
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2">
             <div>
-              <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+              <h1 className="text-lg sm:text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">
                 Katalog &amp; Booking Alat Produksi
               </h1>
               <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
@@ -253,8 +277,8 @@ export const PublicPortal: React.FC<PublicPortalProps> = ({ theme, onToggleTheme
             </div>
           </div>
 
-          <div className="p-3.5 sm:p-4 rounded-2xl border bg-white dark:bg-[#1E293B] border-slate-200 dark:border-slate-800 shadow-sm flex flex-col lg:flex-row items-stretch lg:items-center gap-3">
-            <div className="relative flex-1">
+          <div className="p-3 sm:p-4 rounded-2xl border bg-white dark:bg-[#1E293B] border-slate-200 dark:border-slate-800 shadow-sm flex flex-col lg:flex-row items-stretch lg:items-center gap-2.5 sm:gap-3">
+            <div className="relative flex-1 min-w-0">
               <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
@@ -265,11 +289,11 @@ export const PublicPortal: React.FC<PublicPortalProps> = ({ theme, onToggleTheme
               />
             </div>
 
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-2">
               <select
                 value={selectedKategori}
                 onChange={e => setSelectedKategori(e.target.value)}
-                className="px-3 py-2 rounded-xl text-xs sm:text-sm font-medium border bg-slate-50 dark:bg-[#0F172A] border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:border-[#E30000]"
+                className="flex-1 sm:flex-none min-w-0 px-3 py-2 rounded-xl text-xs sm:text-sm font-medium border bg-slate-50 dark:bg-[#0F172A] border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:border-[#E30000]"
               >
                 <option value="all">Semua Kategori ({kategoriList.length})</option>
                 {kategoriList.map(cat => (
@@ -277,7 +301,7 @@ export const PublicPortal: React.FC<PublicPortalProps> = ({ theme, onToggleTheme
                 ))}
               </select>
 
-              <div className="flex items-center p-0.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-[#0F172A]">
+              <div className="flex items-center p-0.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-[#0F172A] shrink-0">
                 <button
                   type="button"
                   onClick={() => setViewMode('grid')}
