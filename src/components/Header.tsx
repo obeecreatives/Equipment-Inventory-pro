@@ -11,7 +11,8 @@ import {
   AlertCircle,
   ShieldCheck,
   ChevronDown,
-  Link2
+  Link2,
+  Check
 } from 'lucide-react';
 import { Role, SWITCH_APPS } from '../types/inventory';
 
@@ -48,6 +49,16 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const [showSwitchApp, setShowSwitchApp] = useState(false);
   const [showRoleMenu, setShowRoleMenu] = useState(false);
+  const [copiedPublicLink, setCopiedPublicLink] = useState(false);
+
+  const publicBookingUrl =
+    typeof window !== 'undefined' ? `${window.location.origin}/booking` : '/booking';
+
+  const handleCopyClick = () => {
+    if (onCopyPublicLink) onCopyPublicLink();
+    setCopiedPublicLink(true);
+    setTimeout(() => setCopiedPublicLink(false), 2000);
+  };
 
   const roles: { role: Role; label: string; colorClass: string }[] = [
     { role: 'Project Manager', label: 'Project Manager', colorClass: 'bg-red-500/15 text-red-500 border-red-500/30' },
@@ -146,16 +157,35 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           </div>
 
-          {/* Public Portal Link Trigger (Admin / PM) */}
+          {/* Public Portal Link Trigger (Admin / PM): Salin Link & Buka Tab Baru */}
           {(currentRole === 'Admin' || currentRole === 'Project Manager') && onCopyPublicLink && (
-            <button
-              onClick={onCopyPublicLink}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-sky-500/30 bg-sky-500/10 hover:bg-sky-500/20 text-sky-600 dark:text-sky-400 text-xs font-semibold transition-all cursor-pointer"
-              title="Salin link portal publik (/booking) untuk pihak eksternal & freelancer"
-            >
-              <Link2 className="w-3.5 h-3.5" />
-              <span className="hidden lg:inline">Link /booking</span>
-            </button>
+            <div className="flex items-center rounded-lg border border-sky-500/30 bg-sky-500/10 overflow-hidden text-xs">
+              <button
+                type="button"
+                onClick={handleCopyClick}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 text-sky-600 dark:text-sky-400 hover:bg-sky-500/20 transition-colors font-semibold cursor-pointer"
+                title={`Salin link portal publik (${publicBookingUrl})`}
+              >
+                {copiedPublicLink ? (
+                  <Check className="w-3.5 h-3.5 text-emerald-500" />
+                ) : (
+                  <Link2 className="w-3.5 h-3.5" />
+                )}
+                <span className="hidden lg:inline">
+                  {copiedPublicLink ? 'Link Tersalin!' : 'Link /booking'}
+                </span>
+              </button>
+              <a
+                href={publicBookingUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={handleCopyClick}
+                className="px-2 py-1.5 border-l border-sky-500/30 text-sky-600 dark:text-sky-400 hover:bg-sky-500/20 transition-colors flex items-center justify-center"
+                title={`Buka ${publicBookingUrl} di tab baru & salin link`}
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            </div>
           )}
 
           {/* Headless GAS Center Trigger */}

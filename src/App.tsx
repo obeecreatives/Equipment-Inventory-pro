@@ -542,12 +542,40 @@ function InternalWorkspaceApp({
     }
   };
 
-  const handleCopyPublicLink = () => {
+  const handleCopyPublicLink = async () => {
     const publicUrl = `${window.location.origin}/booking`;
-    if (navigator.clipboard?.writeText) {
-      navigator.clipboard.writeText(publicUrl);
+    let copied = false;
+
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(publicUrl);
+        copied = true;
+      }
+    } catch {
+      copied = false;
     }
-    addToast(`Link portal publik disalin: ${publicUrl}`, 'success');
+
+    if (!copied) {
+      try {
+        const textarea = document.createElement('textarea');
+        textarea.value = publicUrl;
+        textarea.setAttribute('readonly', '');
+        textarea.style.position = 'fixed';
+        textarea.style.left = '-9999px';
+        document.body.appendChild(textarea);
+        textarea.select();
+        copied = document.execCommand('copy');
+        document.body.removeChild(textarea);
+      } catch {
+        copied = false;
+      }
+    }
+
+    if (copied) {
+      addToast(`Link portal publik disalin: ${publicUrl}`, 'success');
+    } else {
+      addToast(`Link portal publik: ${publicUrl}`, 'info');
+    }
   };
 
   // 5. Save/Edit Equipment Item
