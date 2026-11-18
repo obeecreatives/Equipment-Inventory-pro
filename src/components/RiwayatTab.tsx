@@ -19,7 +19,8 @@ export const RiwayatTab: React.FC<RiwayatTabProps> = ({ groups, onExportPdf }) =
       .filter(g => {
         if (searchPeminjam) {
           const q = searchPeminjam.toLowerCase().trim();
-          const nama = String(g.kategoriPeminjam === 'Eksternal' ? g.namaPeminjamEksternal : g.dipesanOleh || '').toLowerCase();
+          const isExt = g.kategoriPeminjam === 'Eksternal' || g.kategoriPeminjam === 'Freelancer obeecreatives';
+          const nama = String(isExt ? (g.namaPeminjamEksternal || g.dipesanOleh) : g.dipesanOleh || '').toLowerCase();
           if (!nama.includes(q)) return false;
         }
 
@@ -107,7 +108,8 @@ export const RiwayatTab: React.FC<RiwayatTabProps> = ({ groups, onExportPdf }) =
       ) : (
         <div className="space-y-3">
           {filteredHistory.map(group => {
-            const namaPeminjam = group.kategoriPeminjam === 'Eksternal' ? group.namaPeminjamEksternal : group.dipesanOleh;
+            const isExt = group.kategoriPeminjam === 'Eksternal' || group.kategoriPeminjam === 'Freelancer obeecreatives';
+            const namaPeminjam = isExt ? (group.namaPeminjamEksternal || group.dipesanOleh) : group.dipesanOleh;
             const isCompleted = group.status === 'Selesai';
 
             return (
@@ -126,6 +128,11 @@ export const RiwayatTab: React.FC<RiwayatTabProps> = ({ groups, onExportPdf }) =
                     }`}>
                       {group.status}
                     </span>
+                    {group.statusApproval && (
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                        {group.statusApproval}
+                      </span>
+                    )}
                     {group.nomorFormulir && (
                       <span className="text-xs font-mono font-bold text-slate-500 dark:text-slate-400">
                         {group.nomorFormulir}

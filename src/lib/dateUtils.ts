@@ -159,3 +159,75 @@ export function buildWaReminderUrl(
   const pesan = `Halo ${namaPeminjam},\n\nAlat (${daftarAlat}) yang dipinjam untuk "${untukProyek}" sudah melewati batas waktu pengembalian (rencana: ${formatTanggalRingkas(tanggalKembaliRencana)}).\n\nMohon bantuannya untuk segera dikembalikan ke obeecreatives studio.\n\nTerima kasih! 🙏`;
   return `https://wa.me/${waNumber}?text=${encodeURIComponent(pesan)}`;
 }
+
+/**
+ * Bangun teks notifikasi resmi untuk status approval peminjaman
+ */
+export function getApprovalNotificationSummary(
+  statusApproval: 'Menunggu Konfirmasi' | 'Disetujui' | 'Ditolak' | 'Pemakaian Terjadwal',
+  catatan?: string
+): { headline: string; body: string } {
+  const noteSuffix = catatan && catatan.trim() ? ` Catatan Admin: ${catatan.trim()}` : '';
+  switch (statusApproval) {
+    case 'Disetujui':
+      return {
+        headline: 'Pengajuan Disetujui',
+        body: `Pengajuan peminjaman alat disetujui. Silakan hubungi admin obeecreatives untuk koordinasi pengambilan alat dan konfirmasi jadwal serah terima.${noteSuffix}`
+      };
+    case 'Ditolak':
+      return {
+        headline: 'Pengajuan Ditolak',
+        body: `Mohon maaf, pengajuan peminjaman alat Anda belum dapat disetujui untuk jadwal tersebut.${noteSuffix} Silakan hubungi admin obeecreatives untuk informasi lebih lanjut.`
+      };
+    case 'Pemakaian Terjadwal':
+      return {
+        headline: 'Alat Dalam Jadwal Internal',
+        body: `Mohon maaf, alat yang Anda booking saat ini sudah masuk dalam rencana pemakaian tim internal obeecreatives.${noteSuffix} Silakan hubungi admin untuk opsi jadwal atau unit alternatif.`
+      };
+    default:
+      return {
+        headline: 'Menunggu Konfirmasi Admin',
+        body: 'Pengajuan peminjaman alat Anda sudah tercatat dan sedang menunggu tinjauan dari Admin obeecreatives.'
+      };
+  }
+}
+
+/**
+ * Bangun tautan WhatsApp berisi notifikasi approval untuk pihak yang booking
+ */
+export function buildWaApprovalUrl(params: {
+  kontak: string;
+  namaPeminjam: string;
+  nomorFormulir: string;
+  untukProyek: string;
+  daftarAlat: string;
+  tanggalPinjam: string;
+  tanggalKembaliRencana: string;
+  statusApproval: 'Menunggu Konfirmasi' | 'Disetujui' | 'Ditolak' | 'Pemakaian Terjadwal';
+  catatanApproval?: string;
+}): string {
+  const waNumber = formatNomorWa(params.kontak);
+  const rentang = formatRentangTanggal(params.tanggalPinjam, params.tanggalKembaliRencana);
+  const summary = getApprovalNotificationSummary(params.statusApproval, params.catatanApproval);
+  const labelStatus =
+    params.statusApproval === 'Disetujui'
+      ? 'DISETUJUI'
+      : params.statusApproval === 'Ditolak'
+      ? 'DITOLAK'
+      : params.statusApproval === 'Pemakaian Terjadwal'
+      ? 'PEMAKAIAN TERJADWAL (TIM INTERNAL)'
+      : 'MENUNGGU KONFIRMASI';
+
+  const pesan =
+    `Halo ${params.namaPeminjam || 'Rekan'},\n\n` +
+    `Berikut update status pengajuan peminjaman alat di *obeecreatives*:\n` +
+    `• No. Formulir: ${params.nomorFormulir || '-'}\n` +
+    `• Proyek: ${params.untukProyek || '-'}\n` +
+    `• Tanggal: ${rentang}\n` +
+    `• Alat: ${params.daftarAlat || '-'}\n` +
+    `• Status Approval: *${labelStatus}*\n\n` +
+    `${summary.body}\n\n` +
+    `Terima kasih,\nAdmin obeecreatives`;
+
+  return `https://wa.me/${waNumber}?text=${encodeURIComponent(pesan)}`;
+}

@@ -24,8 +24,9 @@ const ROLE_OPTIONS = ['Admin', 'Staff'];
 
 const KONDISI_OPTIONS = ['Baik', 'Perlu Servis', 'Rusak', 'Hilang', 'Dikeluarkan dari Aset'];
 const BOOKING_STATUS = ['Dipesan', 'Sedang Dipinjam', 'Selesai', 'Dibatalkan'];
+const APPROVAL_STATUS_OPTIONS = ['Menunggu Konfirmasi', 'Disetujui', 'Ditolak', 'Pemakaian Terjadwal'];
 const KONDISI_KEMBALI_OPTIONS = ['Baik', 'Rusak', 'Hilang'];
-const KATEGORI_PEMINJAM_OPTIONS = ['Tim Internal', 'Eksternal'];
+const KATEGORI_PEMINJAM_OPTIONS = ['Tim Internal', 'Freelancer obeecreatives', 'Eksternal'];
 
 // 12 kolom inventaris (FotoUrl ditambahkan di akhir array header)
 const INV_HEADERS = [
@@ -38,7 +39,7 @@ const BOOKING_HEADERS = [
   'UntukProyek', 'KategoriPeminjam', 'DipesanOleh', 'NamaPeminjamEksternal', 'KontakPeminjam', 'NoKTP',
   'Status', 'WaktuCheckout', 'PICMengeluarkan', 'PICMembawa',
   'WaktuPengembalian', 'PICMenerima', 'KondisiKembali', 'CatatanKembali', 'CreatedAt',
-  'StatusBiaya', 'BiayaSewa'
+  'StatusBiaya', 'BiayaSewa', 'StatusApproval', 'CatatanApproval'
 ];
 
 const STATUS_BIAYA_OPTIONS = ['Free Charge', 'Maintenance Charge', 'Full Charge'];
@@ -67,7 +68,8 @@ const BOOKING_KEY_MAP = {
   'WaktuCheckout': 'waktuCheckout', 'PICMengeluarkan': 'picMengeluarkan', 'PICMembawa': 'picMembawa',
   'WaktuPengembalian': 'waktuPengembalian', 'PICMenerima': 'picMenerima',
   'KondisiKembali': 'kondisiKembali', 'CatatanKembali': 'catatanKembali', 'CreatedAt': 'createdAt',
-  'StatusBiaya': 'statusBiaya', 'BiayaSewa': 'biayaSewa'
+  'StatusBiaya': 'statusBiaya', 'BiayaSewa': 'biayaSewa',
+  'StatusApproval': 'statusApproval', 'CatatanApproval': 'catatanApproval'
 };
 
 const OPNAME_KEY_MAP = {
@@ -248,6 +250,7 @@ function getInitialData(callerEmail) {
       options: {
         kondisi: KONDISI_OPTIONS,
         status: BOOKING_STATUS,
+        approvalStatus: APPROVAL_STATUS_OPTIONS,
         kondisiKembali: KONDISI_KEMBALI_OPTIONS,
         kategoriPeminjam: KATEGORI_PEMINJAM_OPTIONS,
         statusBiaya: STATUS_BIAYA_OPTIONS
@@ -256,7 +259,7 @@ function getInitialData(callerEmail) {
     });
   } catch (err) {
     return sanitizeForClient_({
-      serverCodeVersion: 'EQUIPMENT-HEADLESS-v2.1',
+      serverCodeVersion: 'EQUIPMENT-HEADLESS-v2.2',
       ok: false,
       isAdmin: false,
       errorMessage: err && err.message,
@@ -265,9 +268,116 @@ function getInitialData(callerEmail) {
       bookings: [],
       stockOpname: [],
       users: [],
-      options: { kondisi: [], status: [], kondisiKembali: [], kategoriPeminjam: [], statusBiaya: [] }
+      options: { kondisi: [], status: [], approvalStatus: [], kondisiKembali: [], kategoriPeminjam: [], statusBiaya: [] }
     });
   }
+}
+
+/**
+ * Endpoint Khusus Portal Publik (/booking):
+ * - Hanya mengembalikan alat dengan kondisi 'Baik' tanpa field internal sensitif (NoSeri, HargaPerolehan, LokasiSimpan)
+ * - Hanya mengembalikan slot jadwal ter-anonimisasi (tanpa nama peminjam, proyek, nomor WA, atau No KTP)
+ */
+function getPublicPortalData() {
+  const invSheet = getSheet_(SHEET_INVENTARIS, INV_HEADERS);
+  const bookingSheet = getSheet_(SHEET_BOOKING, BOOKING_HEADERS);
+
+  const invData = invSheet.getDataRange().getValues();
+  const invHeaders = invData.shift() || INV_HEADERS;
+  const inventaris = invData
+    .filter(function (row) { return row[0]; })
+    .map(function (row) { return rowToObject_(invHeaders, row, INV_KEY_MAP); })
+    .filter(function (item) { return item.kondisiAlat === 'Baik'; })
+    .map(function (item) {
+      return {
+        id: item.id,
+        kategori: item.kategori,
+        namaBarang: item.namaBarang,
+        noSeri: '',
+        satuan: item.satuan,
+        qtyTotal: Number(item.qtyTotal) || 0,
+        hargaPerolehan: 0,
+        hargaSewa: Number(item.hargaSewa) || 0,
+        lokasiSimpan: '',
+        kondisiAlat: 'Baik',
+        keterangan: item.keterangan || '',
+        fotoUrl: item.fotoUrl || ''
+      };
+    });
+
+  const bookingData = bookingSheet.getDataRange().getValues();
+  const bookingHeaders = bookingData.shift() || BOOKING_HEADERS;
+  const bookingSlots = bookingData
+    .filter(function (row) { return row[0]; })
+    .map(function (row) { return rowToObject_(bookingHeaders, row, BOOKING_KEY_MAP); })
+    .filter(function (b) { return b.status === 'Dipesan' || b.status === 'Sedang Dipinjam'; })
+    .map(function (b) {
+      return {
+        itemId: b.itemId,
+        qty: Number(b.qty) || 1,
+        tanggalPinjam: b.tanggalPinjam,
+        tanggalKembaliRencana: b.tanggalKembaliRencana,
+        status: b.status
+      };
+    });
+
+  return sanitizeForClient_({
+    ok: true,
+    inventaris: inventaris,
+    bookingSlots: bookingSlots
+  });
+}
+
+/**
+ * Cek Status Approval Booking Publik (verifikasi Nomor Formulir + 4 digit terakhir No WA)
+ */
+function checkPublicBookingStatus(nomorFormulir, kontakLast4) {
+  const targetForm = safeStr_(nomorFormulir).trim().toUpperCase();
+  const targetDigits = safeStr_(kontakLast4).replace(/[^0-9]/g, '').slice(-4);
+  if (!targetForm || targetDigits.length !== 4) {
+    return sanitizeForClient_({ ok: true, found: false });
+  }
+
+  const bookingSheet = getSheet_(SHEET_BOOKING, BOOKING_HEADERS);
+  const bookingData = bookingSheet.getDataRange().getValues();
+  const bookingHeaders = bookingData.shift() || BOOKING_HEADERS;
+
+  const matchingRows = bookingData
+    .filter(function (row) { return row[0]; })
+    .map(function (row) { return rowToObject_(bookingHeaders, row, BOOKING_KEY_MAP); })
+    .filter(function (b) {
+      const formMatch = safeStr_(b.nomorFormulir).trim().toUpperCase() === targetForm;
+      const phoneDigits = safeStr_(b.kontakPeminjam).replace(/[^0-9]/g, '');
+      return formMatch && phoneDigits.endsWith(targetDigits);
+    });
+
+  if (matchingRows.length === 0) {
+    return sanitizeForClient_({ ok: true, found: false });
+  }
+
+  const first = matchingRows[0];
+  return sanitizeForClient_({
+    ok: true,
+    found: true,
+    nomorFormulir: first.nomorFormulir,
+    untukProyek: first.untukProyek,
+    namaPeminjam: first.namaPeminjamEksternal || first.dipesanOleh,
+    kategoriPeminjam: first.kategoriPeminjam,
+    tanggalPinjam: first.tanggalPinjam,
+    tanggalKembaliRencana: first.tanggalKembaliRencana,
+    status: first.status,
+    statusApproval: first.statusApproval || 'Menunggu Konfirmasi',
+    catatanApproval: first.catatanApproval || '',
+    statusBiaya: first.statusBiaya,
+    totalBiaya: matchingRows.reduce(function (s, r) { return s + (Number(r.biayaSewa) || 0); }, 0),
+    items: matchingRows.map(function (r) {
+      return {
+        namaBarang: r.namaBarang,
+        kategori: r.kategori,
+        qty: Number(r.qty) || 1
+      };
+    })
+  });
 }
 
 function getBookedQty_(bookingRows, headers, itemId, start, end, excludeBookingId) {
@@ -350,7 +460,15 @@ function createBooking(booking) {
   const now = new Date();
   const timestamp = Utilities.formatDate(now, 'Asia/Jakarta', 'dd/MM/yyyy HH:mm');
 
-  const statusBiaya = STATUS_BIAYA_OPTIONS.indexOf(booking.statusBiaya) !== -1 ? booking.statusBiaya : 'Free Charge';
+  let statusBiaya = STATUS_BIAYA_OPTIONS.indexOf(booking.statusBiaya) !== -1 ? booking.statusBiaya : 'Free Charge';
+  const katPeminjam = booking.kategoriPeminjam || 'Tim Internal';
+  if (booking.source === 'public') {
+    if (katPeminjam === 'Freelancer obeecreatives') {
+      statusBiaya = 'Maintenance Charge';
+    } else {
+      statusBiaya = 'Full Charge';
+    }
+  }
   const persen = STATUS_BIAYA_PERSEN[statusBiaya] || 0;
   const hargaSewaItem = getItemHargaSewa_(booking.itemId);
   const biayaSewa = Math.round(hargaSewaItem * persen * (Number(booking.qty) || 1));
@@ -366,7 +484,7 @@ function createBooking(booking) {
     'TanggalPinjam': booking.tanggalPinjam,
     'TanggalKembaliRencana': booking.tanggalKembaliRencana,
     'UntukProyek': booking.untukProyek || '',
-    'KategoriPeminjam': booking.kategoriPeminjam || 'Tim Internal',
+    'KategoriPeminjam': katPeminjam,
     'DipesanOleh': booking.dipesanOleh || '',
     'NamaPeminjamEksternal': booking.namaPeminjamEksternal || '',
     'KontakPeminjam': booking.kontakPeminjam || '',
@@ -381,7 +499,9 @@ function createBooking(booking) {
     'CatatanKembali': '',
     'CreatedAt': timestamp,
     'StatusBiaya': statusBiaya,
-    'BiayaSewa': biayaSewa
+    'BiayaSewa': biayaSewa,
+    'StatusApproval': booking.statusApproval || 'Menunggu Konfirmasi',
+    'CatatanApproval': booking.catatanApproval || ''
   };
 
   const newRow = BOOKING_HEADERS.map(function (h) { return rowMap[h]; });
@@ -542,6 +662,38 @@ function cancelBookingGroup(groupId) {
   }
   if (count === 0) throw new Error('Tidak ada alat berstatus "Dipesan" pada paket ini.');
   return sanitizeForClient_({ success: true, count: count });
+}
+
+function updateBookingApproval(groupId, statusApproval, catatanApproval) {
+  if (APPROVAL_STATUS_OPTIONS.indexOf(statusApproval) === -1) {
+    throw new Error('Status approval tidak valid: ' + statusApproval);
+  }
+  const sheet = getSheet_(SHEET_BOOKING, BOOKING_HEADERS);
+  ensureHeaders_(sheet, BOOKING_HEADERS);
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  const groupIdx = headers.indexOf('GroupID');
+  const statusIdx = headers.indexOf('Status');
+  let count = 0;
+
+  for (let r = 1; r < data.length; r++) {
+    if (String(data[r][groupIdx]) === String(groupId)) {
+      const updates = {
+        'StatusApproval': statusApproval,
+        'CatatanApproval': catatanApproval || ''
+      };
+      // Jika ditolak atau pemakaian terjadwal internal, lepaskan slot booking menjadi Dibatalkan
+      if ((statusApproval === 'Ditolak' || statusApproval === 'Pemakaian Terjadwal') && data[r][statusIdx] === 'Dipesan') {
+        updates['Status'] = 'Dibatalkan';
+      } else if (statusApproval === 'Disetujui' && data[r][statusIdx] === 'Dibatalkan') {
+        updates['Status'] = 'Dipesan';
+      }
+      updateBookingStatus_(data[r][0], updates);
+      count++;
+    }
+  }
+  if (count === 0) throw new Error('Paket booking tidak ditemukan.');
+  return sanitizeForClient_({ success: true, count: count, statusApproval: statusApproval });
 }
 
 function saveInventarisItem(item) {
@@ -802,6 +954,11 @@ function doGet(e) {
   try {
     if (action === 'getInitialData') {
       responseData = getInitialData(email);
+    } else if (action === 'getPublicPortalData') {
+      responseData = getPublicPortalData();
+    } else if (action === 'checkPublicBookingStatus') {
+      const p = e.parameter;
+      responseData = checkPublicBookingStatus(p.nomorFormulir, p.kontakLast4);
     } else if (action === 'testPing' || action === 'ping') {
       responseData = { ok: true, message: 'pong', spreadsheetId: SPREADSHEET_ID, timestamp: new Date().toISOString() };
     } else if (action === 'checkAvailability') {
@@ -839,6 +996,8 @@ function doPost(e) {
       responseData = returnBookingGroupDetailed(payload.groupId, payload.itemUpdates, payload.picMenerima);
     } else if (action === 'cancelBookingGroup') {
       responseData = cancelBookingGroup(payload.groupId);
+    } else if (action === 'updateBookingApproval') {
+      responseData = updateBookingApproval(payload.groupId, payload.statusApproval, payload.catatanApproval);
     } else if (action === 'saveInventarisItem') {
       responseData = saveInventarisItem(payload.item);
     } else if (action === 'deleteInventarisItem') {

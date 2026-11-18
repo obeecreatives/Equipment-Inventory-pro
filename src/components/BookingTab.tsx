@@ -14,15 +14,17 @@ import {
   User,
   Phone,
   CreditCard,
-  Layers
+  Layers,
+  ShieldCheck
 } from 'lucide-react';
-import { BookingGroup, BookingStatus, Role } from '../types/inventory';
+import { ApprovalStatus, BookingGroup, BookingStatus, Role } from '../types/inventory';
 import { 
   formatTanggalRingkas, 
   formatRentangTanggal, 
   formatRupiah, 
   hitungHariTerlambat, 
-  buildWaReminderUrl 
+  buildWaReminderUrl,
+  buildWaApprovalUrl
 } from '../lib/dateUtils';
 
 interface BookingTabProps {
@@ -31,6 +33,7 @@ interface BookingTabProps {
   onCheckoutGroup: (group: BookingGroup) => void;
   onReturnGroup: (group: BookingGroup) => void;
   onCancelGroup: (group: BookingGroup) => void;
+  onApproveGroup?: (group: BookingGroup) => void;
   onExportPdf: (group: BookingGroup) => void;
   onOpenNewBookingModal: () => void;
 }
@@ -41,6 +44,7 @@ export const BookingTab: React.FC<BookingTabProps> = ({
   onCheckoutGroup,
   onReturnGroup,
   onCancelGroup,
+  onApproveGroup,
   onExportPdf,
   onOpenNewBookingModal
 }) => {
@@ -49,6 +53,7 @@ export const BookingTab: React.FC<BookingTabProps> = ({
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
 
   const canManage = currentRole !== 'Client';
+  const canApprove = currentRole === 'Admin' || currentRole === 'Project Manager' || currentRole === 'Site Engineer';
   const showFinance = currentRole === 'Admin' || currentRole === 'Project Manager';
 
   const toggleExpand = (groupId: string) => {
@@ -97,6 +102,19 @@ export const BookingTab: React.FC<BookingTabProps> = ({
         return 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30';
       default:
         return 'bg-slate-500/15 text-slate-500';
+    }
+  };
+
+  const getApprovalBadge = (approval?: ApprovalStatus) => {
+    switch (approval) {
+      case 'Disetujui':
+        return 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30';
+      case 'Ditolak':
+        return 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30';
+      case 'Pemakaian Terjadwal':
+        return 'bg-orange-500/15 text-orange-600 dark:text-orange-400 border-orange-500/30';
+      default:
+        return 'bg-slate-500/10 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-700';
     }
   };
 
@@ -149,8 +167,10 @@ export const BookingTab: React.FC<BookingTabProps> = ({
           {filteredGroups.map(group => {
             const isExpanded = !!expandedGroups[group.groupId];
             const overdueDays = group.status === 'Sedang Dipinjam' ? hitungHariTerlambat(group.tanggalKembaliRencana) : 0;
-            const namaPeminjam = group.kategoriPeminjam === 'Eksternal' ? group.namaPeminjamEksternal : group.dipesanOleh;
+            const isExternalOrFreelancer = group.kategoriPeminjam === 'Eksternal' || group.kategoriPeminjam === 'Freelancer obeecreatives';
+            const namaPeminjam = isExternalOrFreelancer ? (group.namaPeminjamEksternal || group.dipesanOleh) : group.dipesanOleh;
             const totalItemCount = group.items.reduce((s, i) => s + (Number(i.qty) || 1), 0);
+            const effectiveApproval: ApprovalStatus = group.statusApproval || 'Menunggu Konfirmasi';
 
             return (
               <div
@@ -163,6 +183,9 @@ export const BookingTab: React.FC<BookingTabProps> = ({
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${getStatusBadge(group.status)}`}>
                         {group.status}
+                      </span>
+                      <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${getApprovalBadge(effectiveApproval)}`}>
+                        Approval: {effectiveApproval}
                       </span>
                       {group.nomorFormulir && (
                         <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
@@ -234,6 +257,30 @@ export const BookingTab: React.FC<BookingTabProps> = ({
                       </a>
                     )}
 
+                    {/* WhatsApp Approval Notification if approval already decided & phone available */}
+                    {group.kontakPeminjam && group.statusApproval && group.statusApproval !== 'Menunggu Konfirmasi' && (
+                      <a
+                        href={buildWaApprovalUrl({
+                          kontak: group.kontakPeminjam,
+                          namaPeminjam,
+                          nomorFormulir: group.nomorFormulir,
+                          untukProyek: group.untukProyek,
+                          daftarAlat: group.items.map(i => `${i.namaBarang} (x${i.qty})`).join(', '),
+                          tanggalPinjam: group.tanggalPinjam,
+                          tanggalKembaliRencana: group.tanggalKembaliRencana,
+                          statusApproval: group.statusApproval,
+                          catatanApproval: group.catatanApproval
+                        })}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-xs font-bold hover:bg-emerald-500/25 transition-colors cursor-pointer"
+                        title="Kirim notifikasi status approval ke WhatsApp pemesan"
+                      >
+                        <MessageCircle className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">Notif WA</span>
+                      </a>
+                    )}
+
                     {/* PDF Export */}
                     <button
                       onClick={() => onExportPdf(group)}
@@ -243,6 +290,18 @@ export const BookingTab: React.FC<BookingTabProps> = ({
                       <FileText className="w-3.5 h-3.5 text-red-500" />
                       <span>PDF</span>
                     </button>
+
+                    {/* Approval Button */}
+                    {canApprove && onApproveGroup && (group.status === 'Dipesan' || group.status === 'Dibatalkan') && (
+                      <button
+                        onClick={() => onApproveGroup(group)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-indigo-500/30 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 text-xs font-bold transition-colors cursor-pointer"
+                        title="Atur Status Approval (Disetujui / Ditolak / Pemakaian Terjadwal)"
+                      >
+                        <ShieldCheck className="w-3.5 h-3.5" />
+                        <span>Approval</span>
+                      </button>
+                    )}
 
                     {/* Checkout Button */}
                     {canManage && group.status === 'Dipesan' && (

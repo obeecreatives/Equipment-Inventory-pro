@@ -1,4 +1,9 @@
-import { GasInitialDataResponse, OutboxAction } from '../types/inventory';
+import {
+  GasInitialDataResponse,
+  OutboxAction,
+  PublicBookingStatusResult,
+  PublicPortalDataResponse
+} from '../types/inventory';
 import { getGasUrl, getOutboxQueue, saveOutboxQueue } from './storage';
 
 /**
@@ -31,6 +36,132 @@ export async function fetchInitialDataFromGas(userEmail?: string): Promise<GasIn
   }
 
   return data;
+}
+
+/**
+ * Fetch katalog publik tersanitasi & slot booking ter-anonimisasi untuk portal /booking
+ */
+export async function fetchPublicPortalData(): Promise<PublicPortalDataResponse> {
+  const gasUrl = getGasUrl();
+  const url = new URL(gasUrl);
+  url.searchParams.set('action', 'getPublicPortalData');
+
+  const response = await fetch(url.toString(), {
+    method: 'GET',
+    headers: {
+      'Accept': 'application/json'
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP Error ${response.status}: ${response.statusText}`);
+  }
+
+  const data = await response.json();
+
+  // Graceful fallback jika Code.gs versi lama belum dideploy ulang dengan getPublicPortalData:
+  // Tarik dari getInitialData lalu sanitasi total di client sebelum dikembalikan ke UI publik.
+  if (data && data.ok === false && typeof data.message === 'string' && data.message.includes('Unknown GET action')) {
+    const initial = await fetchInitialDataFromGas();
+    const sanitizedInventaris = (initial.inventaris || [])
+      .filter(item => item.kondisiAlat === 'Baik')
+      .map(item => ({
+        ...item,
+        noSeri: '',
+        hargaPerolehan: 0,
+        lokasiSimpan: ''
+      }));
+
+    const sanitizedSlots = (initial.bookings || [])
+      .filter(b => b.status === 'Dipesan' || b.status === 'Sedang Dipinjam')
+      .map(b => ({
+        itemId: b.itemId,
+        qty: Number(b.qty) || 1,
+        tanggalPinjam: b.tanggalPinjam,
+        tanggalKembaliRencana: b.tanggalKembaliRencana,
+        status: b.status
+      }));
+
+    return {
+      ok: true,
+      inventaris: sanitizedInventaris,
+      bookingSlots: sanitizedSlots
+    };
+  }
+
+  if (!data.ok && data.errorMessage) {
+    throw new Error(data.errorMessage);
+  }
+
+  return data as PublicPortalDataResponse;
+}
+
+/**
+ * Cek status approval booking publik berdasarkan Nomor Formulir & 4 digit terakhir No. WA
+ */
+export async function checkPublicBookingStatus(
+  nomorFormulir: string,
+  kontakLast4: string
+): Promise<PublicBookingStatusResult> {
+  const gasUrl = getGasUrl();
+  const url = new URL(gasUrl);
+  url.searchParams.set('action', 'checkPublicBookingStatus');
+  url.searchParams.set('nomorFormulir', nomorFormulir.trim());
+  url.searchParams.set('kontakLast4', kontakLast4.replace(/[^0-9]/g, '').slice(-4));
+
+  const response = await fetch(url.toString(), {
+    method: 'GET',
+    headers: {
+      'Accept': 'application/json'
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP Error ${response.status}: ${response.statusText}`);
+  }
+
+  const data = await response.json();
+
+  // Graceful fallback jika Code.gs versi lama belum dideploy ulang
+  if (data && data.ok === false && typeof data.message === 'string' && data.message.includes('Unknown GET action')) {
+    const initial = await fetchInitialDataFromGas();
+    const targetForm = nomorFormulir.trim().toUpperCase();
+    const targetDigits = kontakLast4.replace(/[^0-9]/g, '').slice(-4);
+    const matchingRows = (initial.bookings || []).filter(b => {
+      const formMatch = String(b.nomorFormulir || '').trim().toUpperCase() === targetForm;
+      const phoneDigits = String(b.kontakPeminjam || '').replace(/[^0-9]/g, '');
+      const phoneMatch = targetDigits.length === 4 && phoneDigits.endsWith(targetDigits);
+      return formMatch && phoneMatch;
+    });
+
+    if (matchingRows.length === 0) {
+      return { ok: true, found: false };
+    }
+
+    const first = matchingRows[0];
+    return {
+      ok: true,
+      found: true,
+      nomorFormulir: first.nomorFormulir,
+      untukProyek: first.untukProyek,
+      namaPeminjam: first.namaPeminjamEksternal || first.dipesanOleh,
+      kategoriPeminjam: first.kategoriPeminjam,
+      tanggalPinjam: first.tanggalPinjam,
+      tanggalKembaliRencana: first.tanggalKembaliRencana,
+      status: first.status,
+      statusApproval: first.statusApproval || 'Menunggu Konfirmasi',
+      catatanApproval: first.catatanApproval || '',
+      statusBiaya: first.statusBiaya,
+      totalBiaya: matchingRows.reduce((s, r) => s + (Number(r.biayaSewa) || 0), 0),
+      items: matchingRows.map(r => ({
+        namaBarang: r.namaBarang,
+        kategori: r.kategori,
+        qty: Number(r.qty) || 1
+      }))
+    };
+  }
+
+  return data as PublicBookingStatusResult;
 }
 
 export async function pingGasEndpoint(): Promise<{ ok: boolean; latencyMs: number; message: string; spreadsheetId?: string }> {

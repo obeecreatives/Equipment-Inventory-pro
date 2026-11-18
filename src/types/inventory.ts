@@ -2,8 +2,9 @@ export type Role = 'Admin' | 'Project Manager' | 'Site Engineer' | 'Staff' | 'Cl
 
 export type KondisiAlat = 'Baik' | 'Perlu Servis' | 'Rusak' | 'Hilang' | 'Dikeluarkan dari Aset';
 export type BookingStatus = 'Dipesan' | 'Sedang Dipinjam' | 'Selesai' | 'Dibatalkan';
+export type ApprovalStatus = 'Menunggu Konfirmasi' | 'Disetujui' | 'Ditolak' | 'Pemakaian Terjadwal';
 export type KondisiKembali = 'Baik' | 'Rusak' | 'Hilang';
-export type KategoriPeminjam = 'Tim Internal' | 'Eksternal';
+export type KategoriPeminjam = 'Tim Internal' | 'Freelancer obeecreatives' | 'Eksternal';
 export type StatusBiaya = 'Free Charge' | 'Maintenance Charge' | 'Full Charge';
 
 export interface InventarisItem {
@@ -38,6 +39,8 @@ export interface BookingItem {
   kontakPeminjam: string;
   noKtp: string;
   status: BookingStatus;
+  statusApproval?: ApprovalStatus;
+  catatanApproval?: string;
   waktuCheckout: string;
   picMengeluarkan: string;
   picMembawa: string;
@@ -63,10 +66,45 @@ export interface BookingGroup {
   kontakPeminjam: string;
   noKtp: string;
   status: BookingStatus;
+  statusApproval?: ApprovalStatus;
+  catatanApproval?: string;
   statusBiaya: StatusBiaya;
   totalBiaya: number;
   items: BookingItem[];
   createdAt: string;
+}
+
+export interface PublicBookingSlot {
+  itemId: string;
+  qty: number;
+  tanggalPinjam: string;
+  tanggalKembaliRencana: string;
+  status: BookingStatus;
+}
+
+export interface PublicPortalDataResponse {
+  ok: boolean;
+  inventaris: InventarisItem[];
+  bookingSlots: PublicBookingSlot[];
+  errorMessage?: string;
+}
+
+export interface PublicBookingStatusResult {
+  ok: boolean;
+  found?: boolean;
+  nomorFormulir?: string;
+  untukProyek?: string;
+  namaPeminjam?: string;
+  kategoriPeminjam?: KategoriPeminjam;
+  tanggalPinjam?: string;
+  tanggalKembaliRencana?: string;
+  status?: BookingStatus;
+  statusApproval?: ApprovalStatus;
+  catatanApproval?: string;
+  statusBiaya?: StatusBiaya;
+  totalBiaya?: number;
+  items?: Array<{ namaBarang: string; kategori: string; qty: number }>;
+  errorMessage?: string;
 }
 
 export interface StockOpnameRow {

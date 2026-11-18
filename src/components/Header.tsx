@@ -10,7 +10,8 @@ import {
   CheckCircle2, 
   AlertCircle,
   ShieldCheck,
-  ChevronDown
+  ChevronDown,
+  Link2
 } from 'lucide-react';
 import { Role, SWITCH_APPS } from '../types/inventory';
 
@@ -27,6 +28,7 @@ interface HeaderProps {
   gasConnected: boolean;
   onOpenGasCenter: () => void;
   onOpenHelp: () => void;
+  onCopyPublicLink?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -41,7 +43,8 @@ export const Header: React.FC<HeaderProps> = ({
   lastSyncTime,
   gasConnected,
   onOpenGasCenter,
-  onOpenHelp
+  onOpenHelp,
+  onCopyPublicLink
 }) => {
   const [showSwitchApp, setShowSwitchApp] = useState(false);
   const [showRoleMenu, setShowRoleMenu] = useState(false);
@@ -142,6 +145,18 @@ export const Header: React.FC<HeaderProps> = ({
               AUTO
             </button>
           </div>
+
+          {/* Public Portal Link Trigger (Admin / PM) */}
+          {(currentRole === 'Admin' || currentRole === 'Project Manager') && onCopyPublicLink && (
+            <button
+              onClick={onCopyPublicLink}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-sky-500/30 bg-sky-500/10 hover:bg-sky-500/20 text-sky-600 dark:text-sky-400 text-xs font-semibold transition-all cursor-pointer"
+              title="Salin link portal publik (/booking) untuk pihak eksternal & freelancer"
+            >
+              <Link2 className="w-3.5 h-3.5" />
+              <span className="hidden lg:inline">Link /booking</span>
+            </button>
+          )}
 
           {/* Headless GAS Center Trigger */}
           <button

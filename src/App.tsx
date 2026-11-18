@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { 
-  InventarisItem, 
-  BookingItem, 
-  BookingGroup, 
-  StockOpnameRow, 
-  AppUser, 
-  Role, 
-  ToastMessage, 
-  KondisiKembali 
+import {
+  InventarisItem,
+  BookingItem,
+  BookingGroup,
+  StockOpnameRow,
+  AppUser,
+  Role,
+  ToastMessage,
+  KondisiKembali,
+  ApprovalStatus
 } from './types/inventory';
 import { 
   loadStorage, 
@@ -42,6 +43,7 @@ import { BookingTab } from './components/BookingTab';
 import { RiwayatTab } from './components/RiwayatTab';
 import { NilaiAsetTab } from './components/NilaiAsetTab';
 import { Toast } from './components/Toast';
+import { PublicPortal } from './components/public/PublicPortal';
 
 // Modals
 import { BookingModal } from './components/modals/BookingModal';
@@ -53,14 +55,55 @@ import { UserAccessModal } from './components/modals/UserAccessModal';
 import { GasCenterModal } from './components/modals/GasCenterModal';
 import { HelpModal } from './components/modals/HelpModal';
 import { ConfirmModal, ConfirmDialogOptions } from './components/modals/ConfirmModal';
+import { ApprovalModal } from './components/modals/ApprovalModal';
+
+function isPublicPortalRoute(): boolean {
+  if (typeof window === 'undefined') return false;
+  const path = window.location.pathname.replace(/\/+$/, '');
+  const params = new URLSearchParams(window.location.search);
+  return path === '/booking' || path.startsWith('/booking/') || params.get('portal') === 'booking';
+}
 
 export default function App() {
-  // Theme & Layout Preferences - Mode Gelap sebagai default
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
     const saved = localStorage.getItem('eq_theme');
     if (saved === 'light' || saved === 'dark') return saved;
     return 'dark';
   });
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (theme === 'dark') {
+      root.classList.add('dark');
+      root.setAttribute('data-theme', 'dark');
+      document.body.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+      root.setAttribute('data-theme', 'light');
+      document.body.classList.remove('dark');
+    }
+    setStoredTheme(theme);
+  }, [theme]);
+
+  if (isPublicPortalRoute()) {
+    return (
+      <PublicPortal
+        theme={theme}
+        onToggleTheme={() => setTheme(prev => (prev === 'dark' ? 'light' : 'dark'))}
+      />
+    );
+  }
+
+  return <InternalWorkspaceApp theme={theme} setTheme={setTheme} />;
+}
+
+function InternalWorkspaceApp({
+  theme,
+  setTheme
+}: {
+  theme: 'dark' | 'light';
+  setTheme: React.Dispatch<React.SetStateAction<'dark' | 'light'>>;
+}) {
   const [sidebarCollapsed, setSidebarCollapsedState] = useState<boolean>(() => getSidebarCollapsed());
   const [currentRole, setCurrentRole] = useState<Role>(() => getStoredRole());
   const [currentTab, setCurrentTab] = useState<TabType>('peralatan');
@@ -90,6 +133,7 @@ export default function App() {
   const [presetItemForBooking, setPresetItemForBooking] = useState<InventarisItem | null>(null);
   const [checkoutGroupTarget, setCheckoutGroupTarget] = useState<BookingGroup | null>(null);
   const [returnGroupTarget, setReturnGroupTarget] = useState<BookingGroup | null>(null);
+  const [approvalGroupTarget, setApprovalGroupTarget] = useState<BookingGroup | null>(null);
   const [itemModalTarget, setItemModalTarget] = useState<InventarisItem | null>(null);
   const [showNewItemModal, setShowNewItemModal] = useState<boolean>(false);
   const [showOpnameModal, setShowOpnameModal] = useState<boolean>(false);
@@ -145,21 +189,6 @@ export default function App() {
   const dismissToast = (id: string) => {
     setToasts(prev => prev.filter(t => t.id !== id));
   };
-
-  // Sync theme class to <html> element
-  useEffect(() => {
-    const root = document.documentElement;
-    if (theme === 'dark') {
-      root.classList.add('dark');
-      root.setAttribute('data-theme', 'dark');
-      document.body.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
-      root.setAttribute('data-theme', 'light');
-      document.body.classList.remove('dark');
-    }
-    setStoredTheme(theme);
-  }, [theme]);
 
   // Persist local state changes immediately
   useEffect(() => {
@@ -288,6 +317,8 @@ export default function App() {
         kontakPeminjam: first.kontakPeminjam,
         noKtp: first.noKtp,
         status: groupStatus,
+        statusApproval: first.statusApproval || 'Menunggu Konfirmasi',
+        catatanApproval: first.catatanApproval || '',
         statusBiaya: first.statusBiaya,
         totalBiaya: items.reduce((s, it) => s + (Number(it.biayaSewa) || 0), 0),
         items,
@@ -338,6 +369,8 @@ export default function App() {
         kontakPeminjam: sharedData.kontakPeminjam,
         noKtp: sharedData.noKtp,
         status: 'Dipesan',
+        statusApproval: 'Menunggu Konfirmasi',
+        catatanApproval: '',
         waktuCheckout: '',
         picMengeluarkan: '',
         picMembawa: '',
@@ -466,6 +499,55 @@ export default function App() {
     } catch (e) {
       enqueueOutbox('cancelBookingGroup', { groupId: group.groupId });
     }
+  };
+
+  // 4b. Update Booking Approval Status
+  const handleApproveGroup = async (
+    groupId: string,
+    statusApproval: ApprovalStatus,
+    catatanApproval: string
+  ) => {
+    setBookings(prev =>
+      prev.map(b => {
+        if (b.groupId === groupId) {
+          let nextStatus = b.status;
+          if ((statusApproval === 'Ditolak' || statusApproval === 'Pemakaian Terjadwal') && b.status === 'Dipesan') {
+            nextStatus = 'Dibatalkan';
+          } else if (statusApproval === 'Disetujui' && b.status === 'Dibatalkan') {
+            nextStatus = 'Dipesan';
+          }
+          return {
+            ...b,
+            status: nextStatus,
+            statusApproval,
+            catatanApproval
+          };
+        }
+        return b;
+      })
+    );
+
+    setApprovalGroupTarget(prev =>
+      prev && prev.groupId === groupId
+        ? { ...prev, statusApproval, catatanApproval }
+        : prev
+    );
+
+    addToast(`Status approval diperbarui: ${statusApproval}`, 'success');
+
+    try {
+      await postToGas('updateBookingApproval', { groupId, statusApproval, catatanApproval });
+    } catch (e) {
+      enqueueOutbox('updateBookingApproval', { groupId, statusApproval, catatanApproval });
+    }
+  };
+
+  const handleCopyPublicLink = () => {
+    const publicUrl = `${window.location.origin}/booking`;
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(publicUrl);
+    }
+    addToast(`Link portal publik disalin: ${publicUrl}`, 'success');
   };
 
   // 5. Save/Edit Equipment Item
@@ -751,6 +833,7 @@ export default function App() {
         gasConnected={gasConnected}
         onOpenGasCenter={() => setShowGasCenterModal(true)}
         onOpenHelp={() => setShowHelpModal(true)}
+        onCopyPublicLink={handleCopyPublicLink}
       />
 
       {/* Main Container: Sidebar + Content */}
@@ -810,6 +893,7 @@ export default function App() {
               onCheckoutGroup={g => setCheckoutGroupTarget(g)}
               onReturnGroup={g => setReturnGroupTarget(g)}
               onCancelGroup={handleCancelGroup}
+              onApproveGroup={g => setApprovalGroupTarget(g)}
               onExportPdf={handleExportPdf}
               onOpenNewBookingModal={() => {
                 setPresetItemForBooking(null);
@@ -874,6 +958,14 @@ export default function App() {
           group={returnGroupTarget}
           onClose={() => setReturnGroupTarget(null)}
           onSubmitReturn={handleReturnGroup}
+        />
+      )}
+
+      {approvalGroupTarget && (
+        <ApprovalModal
+          group={approvalGroupTarget}
+          onClose={() => setApprovalGroupTarget(null)}
+          onSubmitApproval={handleApproveGroup}
         />
       )}
 

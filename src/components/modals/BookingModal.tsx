@@ -52,16 +52,27 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     return Array.from(new Set(bookings.map(b => b.dipesanOleh).filter(Boolean))).sort();
   }, [bookings]);
 
-  // Autocomplete external borrowers
+  // Autocomplete external/freelancer borrowers
   const externalBorrowers = useMemo(() => {
     const map: Record<string, { kontak: string; noKtp: string }> = {};
     bookings.forEach(b => {
-      if (b.kategoriPeminjam === 'Eksternal' && b.namaPeminjamEksternal) {
+      if ((b.kategoriPeminjam === 'Eksternal' || b.kategoriPeminjam === 'Freelancer obeecreatives') && b.namaPeminjamEksternal) {
         map[b.namaPeminjamEksternal] = { kontak: b.kontakPeminjam, noKtp: b.noKtp };
       }
     });
     return map;
   }, [bookings]);
+
+  const handleKategoriPeminjamChange = (nextKategori: KategoriPeminjam) => {
+    setKategoriPeminjam(nextKategori);
+    if (nextKategori === 'Tim Internal') {
+      setStatusBiaya('Free Charge');
+    } else if (nextKategori === 'Freelancer obeecreatives') {
+      setStatusBiaya('Maintenance Charge');
+    } else if (nextKategori === 'Eksternal') {
+      setStatusBiaya('Full Charge');
+    }
+  };
 
   const handleExternalNameChange = (val: string) => {
     setNamaPeminjamEksternal(val);
@@ -122,10 +133,12 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
   const allAvailable = itemRows.length > 0 && itemRows.every(r => r.availabilityChecked && r.available);
 
+  const needsExternalContact = kategoriPeminjam === 'Eksternal' || kategoriPeminjam === 'Freelancer obeecreatives';
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!untukProyek.trim() || !dipesanOleh.trim()) return;
-    if (kategoriPeminjam === 'Eksternal' && (!namaPeminjamEksternal.trim() || !kontakPeminjam.trim())) return;
+    if (needsExternalContact && (!namaPeminjamEksternal.trim() || !kontakPeminjam.trim())) return;
 
     const itemsToSubmit = itemRows.map(r => {
       const inv = inventaris.find(i => i.id === r.itemId);
@@ -255,21 +268,26 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 </label>
                 <select
                   value={kategoriPeminjam}
-                  onChange={e => setKategoriPeminjam(e.target.value as KategoriPeminjam)}
+                  onChange={e => handleKategoriPeminjamChange(e.target.value as KategoriPeminjam)}
                   className="w-full px-3 py-2 rounded-xl text-sm border bg-slate-50 dark:bg-[#1E293B] border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:border-[#E30000]"
                 >
                   <option value="Tim Internal">Tim Internal</option>
+                  <option value="Freelancer obeecreatives">Freelancer obeecreatives</option>
                   <option value="Eksternal">Eksternal</option>
                 </select>
               </div>
             </div>
 
-            {/* External fields */}
-            {kategoriPeminjam === 'Eksternal' && (
+            {/* External / Freelancer fields */}
+            {needsExternalContact && (
               <div className="p-3.5 rounded-xl border border-amber-500/30 bg-amber-500/10 space-y-3">
                 <div className="text-xs font-bold text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
                   <User className="w-4 h-4" />
-                  <span>Detail Peminjam Eksternal (Wajib Kontak)</span>
+                  <span>
+                    {kategoriPeminjam === 'Freelancer obeecreatives'
+                      ? 'Detail Freelancer obeecreatives (Wajib Kontak)'
+                      : 'Detail Peminjam Eksternal (Wajib Kontak)'}
+                  </span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>

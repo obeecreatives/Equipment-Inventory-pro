@@ -30,6 +30,7 @@ interface ImageInspectorModalProps {
   onClose: () => void;
   onEditItem?: (item: InventarisItem) => void;
   canEdit?: boolean;
+  hideInternalDetails?: boolean;
   itemsList?: InventarisItem[];
   onNavigateItem?: (item: InventarisItem) => void;
 }
@@ -40,6 +41,7 @@ export const ImageInspectorModal: React.FC<ImageInspectorModalProps> = ({
   onClose,
   onEditItem,
   canEdit = false,
+  hideInternalDetails = false,
   itemsList = [],
   onNavigateItem
 }) => {
@@ -292,12 +294,12 @@ export const ImageInspectorModal: React.FC<ImageInspectorModalProps> = ({
                 <Tag className="w-3 h-3 text-slate-500" />
                 {item.kategori}
               </span>
-              {item.noSeri && (
+              {!hideInternalDetails && item.noSeri && (
                 <span className="font-mono text-slate-400">
                   SN: {item.noSeri}
                 </span>
               )}
-              {item.lokasiSimpan && (
+              {!hideInternalDetails && item.lokasiSimpan && (
                 <span className="hidden md:flex items-center gap-1 text-slate-400">
                   <MapPin className="w-3 h-3 text-[#E30000]" />
                   {item.lokasiSimpan}
